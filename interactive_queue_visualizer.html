@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Queue Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0d0f14;
+  --bg2:       #151820;
+  --bg3:       #1c1f2a;
+  --border:    #2a2d3a;
+  --border2:   #353848;
+  --text:      #e8eaf2;
+  --text2:     #8b8fa8;
+  --text3:     #555870;
+
+  --teal:      #00d4aa;
+  --teal-bg:   rgba(0,212,170,.12);
+  --teal-brd:  rgba(0,212,170,.35);
+
+  --amber:     #f5a623;
+  --amber-bg:  rgba(245,166,35,.12);
+  --amber-brd: rgba(245,166,35,.35);
+
+  --purple:    #9b8cff;
+  --purple-bg: rgba(155,140,255,.12);
+  --purple-brd:rgba(155,140,255,.35);
+
+  --red:       #ff5f6d;
+  --red-bg:    rgba(255,95,109,.1);
+  --red-brd:   rgba(255,95,109,.3);
+
+  --green:     #4ade80;
+  --green-bg:  rgba(74,222,128,.1);
+
+  --radius:    12px;
+  --radius-lg: 18px;
+  --mono:      'IBM Plex Mono', monospace;
+  --sans:      'Tajawal', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 40px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.logo-icon {
+  width: 42px; height: 42px;
+  background: var(--teal-bg);
+  border: 1px solid var(--teal-brd);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-icon svg { width: 22px; height: 22px; }
+.logo-text h1 {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.logo-text p {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 1px;
+}
+.mode-switch {
+  display: flex;
+  gap: 0;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+}
+.mode-btn {
+  padding: 8px 22px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.mode-btn.active {
+  background: var(--teal-bg);
+  color: var(--teal);
+  border: 1px solid var(--teal-brd);
+}
+
+.nav-menu {
+  display: flex;
+  gap: 20px;
+}
+.nav-link {
+  color: var(--text2);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all .2s;
+}
+.nav-link:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+.nav-link.active {
+  background: var(--teal-bg);
+  color: var(--teal);
+  border: 1px solid var(--teal-brd);
+}
+
+/* ── Layout ── */
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr auto;
+  gap: 0;
+  padding: 32px 40px;
+  gap: 28px;
+}
+
+/* ── Stats row ── */
+.stats-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color .2s;
+}
+.stat-card:hover { border-color: var(--border2); }
+.stat-label {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+}
+.stat-value.teal  { color: var(--teal); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.purple{ color: var(--purple); }
+.stat-value.red   { color: var(--red); }
+.stat-value.green { color: var(--green); }
+
+/* ── Queue canvas ── */
+.queue-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text2);
+  letter-spacing: .5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-title span { color: var(--teal); }
+.flow-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 24px 0;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.lbl-front { color: var(--purple); }
+.lbl-rear  { color: var(--amber); }
+
+.queue-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 28px 24px;
+  gap: 12px;
+  overflow-x: auto;
+  min-height: 200px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+.queue-stage::-webkit-scrollbar { height: 4px; }
+.queue-stage::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.empty-state {
+  margin: auto;
+  text-align: center;
+  color: var(--text3);
+}
+.empty-state .em-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 12px;
+  opacity: .4;
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: -2px;
+}
+.empty-state p { font-size: 15px; }
+
+/* ── Queue nodes ── */
+.q-node-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.q-node {
+  width: 96px; height: 96px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: var(--mono);
+  border: 2px solid;
+  cursor: default;
+  position: relative;
+  transition: transform .15s, box-shadow .15s;
+}
+.q-node:hover { transform: translateY(-3px); }
+.q-node.normal {
+  background: rgba(139,143,168,.08);
+  border-color: var(--border2);
+  color: var(--text);
+}
+.q-node.front {
+  background: var(--purple-bg);
+  border-color: var(--purple);
+  color: var(--purple);
+  box-shadow: 0 0 24px rgba(155,140,255,.2);
+}
+.q-node.rear {
+  background: var(--amber-bg);
+  border-color: var(--amber);
+  color: var(--amber);
+  box-shadow: 0 0 24px rgba(245,166,35,.2);
+}
+.q-node.front.rear {
+  background: var(--teal-bg);
+  border-color: var(--teal);
+  color: var(--teal);
+  box-shadow: 0 0 24px rgba(0,212,170,.2);
+}
+.q-node .val {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+}
+.q-node .idx {
+  font-size: 11px;
+  opacity: .6;
+}
+.q-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 5px;
+  letter-spacing: .5px;
+}
+.q-label.front { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-brd); }
+.q-label.rear  { background: var(--amber-bg);  color: var(--amber);  border: 1px solid var(--amber-brd); }
+.q-label.both  { background: var(--teal-bg);   color: var(--teal);   border: 1px solid var(--teal-brd); }
+.q-label.mid   { opacity: 0; }
+
+.arr-sep {
+  font-family: var(--mono);
+  font-size: 22px;
+  color: var(--border2);
+  flex-shrink: 0;
+  padding-bottom: 40px;
+  user-select: none;
+}
+
+/* Animations */
+@keyframes nodeIn  { from { opacity:0; transform:translateX(40px) scale(.8); } to { opacity:1; transform:none; } }
+@keyframes nodeOut { to   { opacity:0; transform:translateX(-40px) scale(.8); } }
+@keyframes nodePulse { 0%,100% { transform:scale(1); } 40% { transform:scale(1.12); } }
+@keyframes nodeShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+.anim-in     { animation: nodeIn .35s cubic-bezier(.2,.8,.3,1) forwards; }
+.anim-out    { animation: nodeOut .3s ease-in forwards; }
+.anim-pulse  { animation: nodePulse .45s ease-in-out; }
+.anim-shake  { animation: nodeShake .3s ease-in-out; }
+
+/* ── Side panel ── */
+.side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Controls */
+.ctrl-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+.ctrl-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.inp-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+input[type=text] {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px;
+  padding: 0 14px;
+  height: 48px;
+  outline: none;
+  transition: border-color .2s;
+  direction: ltr;
+}
+input[type=text]:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,212,170,.1); }
+input[type=text]::placeholder { color: var(--text3); font-size: 14px; }
+
+.btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.op-btn {
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .15s;
+  letter-spacing: .3px;
+}
+.op-btn:hover  { filter: brightness(1.15); }
+.op-btn:active { transform: scale(.96); }
+
+.btn-enq  { background: var(--teal-bg);   border-color: var(--teal-brd);   color: var(--teal);   }
+.btn-deq  { background: var(--amber-bg);  border-color: var(--amber-brd);  color: var(--amber);  }
+.btn-peek { background: var(--purple-bg); border-color: var(--purple-brd); color: var(--purple); }
+.btn-rnd  { background: rgba(74,222,128,.1); border-color: rgba(74,222,128,.3); color: var(--green); }
+.btn-clr  { background: var(--red-bg);    border-color: var(--red-brd);    color: var(--red); grid-column: span 2; }
+
+/* ── Linked list panel ── */
+.ll-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+.ll-panel-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.ll-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+.ll-track::-webkit-scrollbar { height: 3px; }
+.ll-track::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.ll-node-box {
+  display: flex;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 13px;
+  flex-shrink: 0;
+  height: 44px;
+  background: var(--bg3);
+}
+.ll-data {
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text);
+  border-right: 1px solid var(--border2);
+  min-width: 48px;
+  justify-content: center;
+}
+.ll-ptr {
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text3);
+}
+.ll-arrow-line {
+  width: 24px; height: 2px;
+  background: var(--border2);
+  position: relative;
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0 1px;
+}
+.ll-arrow-line::after {
+  content: '';
+  position: absolute;
+  right: -1px; top: -4px;
+  border-left: 7px solid var(--border2);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+.ll-null {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text3);
+  padding: 0 8px;
+  align-self: center;
+}
+.ll-ptr-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.ptr-tag {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text2);
+}
+.ptr-pip { width: 8px; height: 8px; border-radius: 50%; }
+.front-pip { background: var(--purple); }
+.rear-pip  { background: var(--amber); }
+
+/* ── Log ── */
+.log-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.log-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.log-hdr-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.log-clr-btn {
+  background: none; border: none;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); cursor: pointer;
+  transition: color .15s;
+}
+.log-clr-btn:hover { color: var(--red); }
+.log-body {
+  overflow-y: auto;
+  flex: 1;
+  max-height: 260px;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+.log-body::-webkit-scrollbar { width: 3px; }
+.log-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.log-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  font-family: var(--mono);
+  font-size: 13px;
+  transition: background .1s;
+}
+.log-row:hover { background: rgba(255,255,255,.03); }
+.log-pip {
+  width: 7px; height: 7px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.p-enq   { background: var(--teal); }
+.p-deq   { background: var(--amber); }
+.p-peek  { background: var(--purple); }
+.p-err   { background: var(--red); }
+.p-info  { background: var(--text3); }
+.log-msg { color: var(--text2); flex: 1; }
+.log-msg .hi { color: var(--text); font-weight: 500; }
+.log-ts  { color: var(--text3); font-size: 11px; flex-shrink: 0; }
+
+/* ── Bottom code strip ── */
+.code-strip {
+  grid-column: 1 / -1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 24px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+}
+.code-strip .kw  { color: var(--purple); }
+.code-strip .fn  { color: var(--teal); }
+.code-strip .val { color: var(--amber); }
+.code-strip .cm  { color: var(--text3); }
+.code-strip .sep { color: var(--border2); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 999;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err   { border-color: var(--red-brd);  color: var(--red); }
+.toast.peek  { border-color: var(--purple-brd); color: var(--purple); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#00d4aa" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="8" width="18" height="8" rx="3"/>
+        <path d="M7 8V6M17 8V6M7 16v2M17 16v2"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <h1>Queue Visualizer</h1>
+      <p>هيكل بيانات الطابور — تفاعلي</p>
+    </div>
+  </div>
+  <nav class="nav-menu">
+    <a href="index.html" class="nav-link">Home</a>
+    <a href="linkedlist.html" class="nav-link ">Linked List</a>
+    <a href="stack.html" class="nav-link">Stacks</a>
+    <a href="interactive_queue_visualizer.html" class="nav-link active">Queues</a>
+  </nav>
+  <div class="mode-switch">
+    <button class="mode-btn active" onclick="setMode('array')">Array</button>
+    <button class="mode-btn" onclick="setMode('linked')">Linked List</button>
+  </div>
+ 
+</header>
+
+<!-- Main -->
+<main>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">الحجم / Size</div>
+      <div class="stat-value teal" id="s-size">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Front</div>
+      <div class="stat-value purple" id="s-front">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Rear</div>
+      <div class="stat-value amber" id="s-rear">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">الحالة / Status</div>
+      <div class="stat-value green" id="s-status">فارغ</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">العمليات / Ops</div>
+      <div class="stat-value" id="s-ops">0</div>
+    </div>
+  </div>
+
+  <!-- Queue canvas -->
+  <div class="queue-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>◈</span> Queue — الطابور
+        <span id="mode-badge" style="font-size:11px;background:var(--teal-bg);border:1px solid var(--teal-brd);color:var(--teal);padding:2px 10px;border-radius:5px;margin-right:8px">Array</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text3)">
+        <span id="cap-info">MAX = 8</span>
+      </div>
+    </div>
+    <div class="flow-labels">
+      <span class="lbl-front">← dequeue (front)</span>
+      <span class="lbl-rear">enqueue (rear) →</span>
+    </div>
+    <div class="queue-stage" id="qstage"></div>
+  </div>
+
+  <!-- Side column -->
+  <div class="side-col">
+
+    <!-- Controls -->
+    <div class="ctrl-panel">
+      <div class="ctrl-title">العمليات / Operations</div>
+      <div class="inp-row">
+        <input type="text" id="val-inp" placeholder="قيمة..." maxlength="6" onkeydown="if(event.key==='Enter')enqueue()">
+      </div>
+      <div class="btn-grid">
+        <button class="op-btn btn-enq" onclick="enqueue()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8l5 5 5-5"/></svg>
+          Enqueue
+        </button>
+        <button class="op-btn btn-deq" onclick="dequeue()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 13V3M3 8l5-5 5 5"/></svg>
+          Dequeue
+        </button>
+        <button class="op-btn btn-peek" onclick="peek()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="2"/><path d="M2 8s2-4 6-4 6 4 6 4-2 4-6 4-6-4-6-4z"/></svg>
+          Peek
+        </button>
+        <button class="op-btn btn-rnd" onclick="fillRandom()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+          عشوائي
+        </button>
+        <button class="op-btn btn-clr" onclick="clearQ()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
+          مسح الكل
+        </button>
+      </div>
+    </div>
+
+    <!-- Linked list view -->
+    <div class="ll-panel" id="ll-panel" style="display:none">
+      <div class="ll-panel-title">تمثيل الذاكرة</div>
+      <div class="ll-track" id="ll-track"></div>
+      <div class="ll-ptr-row" id="ll-ptrs"></div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-panel">
+      <div class="log-hdr">
+        <span class="log-hdr-title">سجل العمليات</span>
+        <button class="log-clr-btn" onclick="clearLog()">مسح</button>
+      </div>
+      <div class="log-body" id="log-body"></div>
+    </div>
+
+  </div>
+
+  <!-- Code strip -->
+  <div class="code-strip" id="code-strip">
+    <span class="cm">// ابدأ بإضافة عنصر لترى الكود</span>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+let queue = [];
+let mode  = 'array';
+let ops   = 0;
+const MAX = 8;
+let toastTimer;
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&m==='array')||(i===1&&m==='linked')));
+  document.getElementById('mode-badge').textContent = m === 'array' ? 'Array' : 'Linked List';
+  document.getElementById('cap-info').textContent   = m === 'array' ? 'MAX = 8' : 'dynamic';
+  document.getElementById('ll-panel').style.display = m === 'linked' ? 'block' : 'none';
+  addLog('info', 'تم التبديل إلى <span class="hi">' + (m==='array'?'Array':'Linked List') + '</span>');
+  render(); updateStats();
+}
+
+function enqueue() {
+  let v = document.getElementById('val-inp').value.trim();
+  if (!v) v = String(Math.floor(Math.random()*90)+10);
+  if (mode === 'array' && queue.length >= MAX) {
+    showToast('الطابور ممتلئ! MAX = ' + MAX, 'err');
+    addLog('err', 'enqueue(<span class="hi">'+v+'</span>) — ❌ ممتلئ'); return;
+  }
+  queue.push(v);
+  ops++;
+  addLog('enq', 'enqueue(<span class="hi">'+v+'</span>) → أُضيف في الـ rear');
+  setCode('enq', v);
+  render(queue.length-1, 'anim-in');
+  updateStats();
+  document.getElementById('val-inp').value = '';
+}
+
+function dequeue() {
+  if (!queue.length) { showToast('الطابور فارغ!', 'err'); addLog('err','dequeue() — ❌ فارغ'); return; }
+  const v = queue[0];
+  ops++;
+  addLog('deq', 'dequeue() → <span class="hi">'+v+'</span> خرج من الـ front');
+  setCode('deq', v);
+  const stage = document.getElementById('qstage');
+  const firstWrap = stage.querySelector('.q-node-wrap');
+  if (firstWrap) {
+    const node = firstWrap.querySelector('.q-node');
+    node.classList.add('anim-out');
+    setTimeout(() => { queue.shift(); render(); updateStats(); }, 290);
+  } else { queue.shift(); render(); updateStats(); }
+}
+
+function peek() {
+  if (!queue.length) { showToast('الطابور فارغ!', 'err'); return; }
+  ops++;
+  const v = queue[0];
+  addLog('peek', 'peek() → <span class="hi">'+v+'</span> (بدون إزالة)');
+  setCode('peek', v);
+  showToast('peek() = ' + v, 'peek');
+  const stage = document.getElementById('qstage');
+  const firstWrap = stage.querySelector('.q-node-wrap');
+  if (firstWrap) {
+    const node = firstWrap.querySelector('.q-node');
+    node.classList.add('anim-pulse');
+    setTimeout(() => node.classList.remove('anim-pulse'), 500);
+  }
+  updateStats();
+}
+
+function fillRandom() {
+  const limit = mode === 'array' ? MAX : 12;
+  const n = Math.min(4, limit - queue.length);
+  if (n <= 0) { showToast('الطابور ممتلئ!', 'err'); return; }
+  for (let i = 0; i < n; i++) queue.push(String(Math.floor(Math.random()*90)+10));
+  ops += n;
+  addLog('enq', 'أُضيف <span class="hi">'+n+'</span> عناصر عشوائية');
+  render(); updateStats();
+}
+
+function clearQ() {
+  queue = [];
+  addLog('info', 'تم مسح الطابور بالكامل');
+  setCode('clear');
+  render(); updateStats();
+}
+
+function render(animIdx = -1, animCls = '') {
+  const stage = document.getElementById('qstage');
+  stage.innerHTML = '';
+  if (!queue.length) {
+    stage.innerHTML = '<div class="empty-state"><span class="em-icon">[ ]</span><p>الطابور فارغ — اضغط Enqueue لإضافة عنصر</p></div>';
+    renderLL(); return;
+  }
+  queue.forEach((val, i) => {
+    const isFirst = i === 0;
+    const isLast  = i === queue.length - 1;
+    const wrap = document.createElement('div');
+    wrap.className = 'q-node-wrap';
+    let nodeCls = 'q-node';
+    let labelCls = 'q-label mid';
+    let labelTxt = '&nbsp;';
+    if (isFirst && isLast) { nodeCls += ' front rear'; labelCls = 'q-label both'; labelTxt = 'front & rear'; }
+    else if (isFirst)      { nodeCls += ' front';      labelCls = 'q-label front'; labelTxt = 'FRONT'; }
+    else if (isLast)       { nodeCls += ' rear';       labelCls = 'q-label rear';  labelTxt = 'REAR'; }
+    else                   { nodeCls += ' normal'; }
+    if (i === animIdx) nodeCls += ' ' + animCls;
+    wrap.innerHTML = `
+      <div class="${nodeCls}">
+        <span class="val">${val}</span>
+        <span class="idx">[${i}]</span>
+      </div>
+      <span class="${labelCls}">${labelTxt}</span>
+    `;
+    stage.appendChild(wrap);
+    if (i < queue.length - 1) {
+      const sep = document.createElement('div');
+      sep.className = 'arr-sep';
+      sep.textContent = '→';
+      stage.appendChild(sep);
+    }
+  });
+  renderLL();
+}
+
+function renderLL() {
+  const track = document.getElementById('ll-track');
+  const ptrs  = document.getElementById('ll-ptrs');
+  if (!track) return;
+  track.innerHTML = ''; ptrs.innerHTML = '';
+  if (!queue.length) { track.innerHTML = '<span class="ll-null">NULL</span>'; return; }
+  queue.forEach((val, i) => {
+    const isLast = i === queue.length - 1;
+    const node = document.createElement('div');
+    node.style.display = 'flex'; node.style.alignItems = 'center';
+    node.innerHTML = `
+      <div class="ll-node-box">
+        <div class="ll-data">${val}</div>
+        <div class="ll-ptr">${isLast ? 'NULL' : 'next'}</div>
+      </div>
+      ${!isLast ? '<div class="ll-arrow-line"></div>' : ''}
+    `;
+    track.appendChild(node);
+  });
+  ptrs.innerHTML = `
+    <div class="ptr-tag"><span class="ptr-pip front-pip"></span>front* → <strong style="color:var(--purple)">${queue[0]}</strong></div>
+    <div class="ptr-tag"><span class="ptr-pip rear-pip"></span>rear* → <strong style="color:var(--amber)">${queue[queue.length-1]}</strong></div>
+    <span style="margin-right:auto;font-family:var(--mono);font-size:11px;color:var(--text3)">${queue.length} nodes</span>
+  `;
+}
+
+function updateStats() {
+  const n = queue.length;
+  document.getElementById('s-size').textContent  = n;
+  document.getElementById('s-front').textContent = n ? queue[0] : '—';
+  document.getElementById('s-rear').textContent  = n ? queue[n-1] : '—';
+  document.getElementById('s-ops').textContent   = ops;
+  const st = document.getElementById('s-status');
+  if (!n) { st.textContent = 'فارغ'; st.className = 'stat-value green'; }
+  else if (mode==='array' && n>=MAX) { st.textContent = 'ممتلئ'; st.className = 'stat-value red'; }
+  else { st.textContent = 'نشط'; st.className = 'stat-value teal'; }
+}
+
+function setCode(op, v) {
+  const s = document.getElementById('code-strip');
+  const templates = {
+    enq:   `<span class="kw">queue</span>.<span class="fn">enqueue</span>(<span class="val">${v}</span>); <span class="cm">// rear = ${queue.length-1}</span>`,
+    deq:   `<span class="val">${v}</span> = <span class="kw">queue</span>.<span class="fn">dequeue</span>(); <span class="cm">// front يتقدم</span>`,
+    peek:  `<span class="val">${v}</span> = <span class="kw">queue</span>.<span class="fn">peek</span>(); <span class="cm">// بدون إزالة</span>`,
+    clear: `<span class="kw">queue</span>.<span class="fn">clear</span>(); <span class="cm">// size = 0</span>`,
+  };
+  s.innerHTML = templates[op] || '';
+}
+
+function addLog(type, msg) {
+  const body = document.getElementById('log-body');
+  const now  = new Date();
+  const ts   = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+  const dotMap = { enq:'p-enq', deq:'p-deq', peek:'p-peek', err:'p-err', info:'p-info' };
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `<span class="log-pip ${dotMap[type]||'p-info'}"></span><span class="log-msg">${msg}</span><span class="log-ts">${ts}</span>`;
+  body.insertBefore(row, body.firstChild);
+  while (body.children.length > 40) body.removeChild(body.lastChild);
+}
+
+function clearLog() { document.getElementById('log-body').innerHTML = ''; }
+
+function showToast(msg, cls='') {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + cls + ' show';
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+render(); updateStats();
+addLog('info', 'Queue Visualizer جاهز — ابدأ!');
+</script>
+</body>
+</html>

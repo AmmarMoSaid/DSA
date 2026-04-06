@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stack Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0d0f14;
+  --bg2:       #151820;
+  --bg3:       #1c1f2a;
+  --border:    #2a2d3a;
+  --border2:   #353848;
+  --text:      #e8eaf2;
+  --text2:     #8b8fa8;
+  --text3:     #555870;
+
+  --coral:     #ff6b6b;
+  --coral-bg:  rgba(255,107,107,.12);
+  --coral-brd: rgba(255,107,107,.35);
+
+  --amber:     #f5a623;
+  --amber-bg:  rgba(245,166,35,.12);
+  --amber-brd: rgba(245,166,35,.35);
+
+  --purple:    #9b8cff;
+  --purple-bg: rgba(155,140,255,.12);
+  --purple-brd:rgba(155,140,255,.35);
+
+  --red:       #ff5f6d;
+  --red-bg:    rgba(255,95,109,.1);
+  --red-brd:   rgba(255,95,109,.3);
+
+  --teal:      #00d4aa;
+  --teal-bg:   rgba(0,212,170,.12);
+  --teal-brd:  rgba(0,212,170,.35);
+
+  --green:     #4ade80;
+  --green-bg:  rgba(74,222,128,.1);
+
+  --radius:    12px;
+  --radius-lg: 18px;
+  --mono:      'IBM Plex Mono', monospace;
+  --sans:      'Tajawal', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 40px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.logo { display: flex; align-items: center; gap: 14px; }
+.logo-icon {
+  width: 42px; height: 42px;
+  background: var(--coral-bg);
+  border: 1px solid var(--coral-brd);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-icon svg { width: 22px; height: 22px; }
+.logo-text h1 {
+  font-family: var(--mono);
+  font-size: 18px; font-weight: 600;
+  color: var(--text); letter-spacing: -0.3px;
+}
+.logo-text p { font-size: 13px; color: var(--text2); margin-top: 1px; }
+
+.mode-switch {
+  display: flex;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+}
+.mode-btn {
+  padding: 8px 22px; border-radius: 7px; border: none;
+  background: transparent; color: var(--text2);
+  font-family: var(--mono); font-size: 14px; cursor: pointer; transition: all .2s;
+}
+.mode-btn.active {
+  background: var(--coral-bg); color: var(--coral); border: 1px solid var(--coral-brd);
+}
+
+.nav-menu {
+  display: flex;
+  gap: 20px;
+}
+.nav-link {
+  color: var(--text2);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all .2s;
+}
+.nav-link:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+.nav-link.active {
+  background: var(--coral-bg);
+  color: var(--coral);
+  border: 1px solid var(--coral-brd);
+}
+
+/* ── Main layout ── */
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr auto;
+  padding: 32px 40px;
+  gap: 28px;
+}
+
+/* ── Stats ── */
+.stats-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: border-color .2s;
+}
+.stat-card:hover { border-color: var(--border2); }
+.stat-label {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 1px;
+}
+.stat-value {
+  font-family: var(--mono); font-size: 28px;
+  font-weight: 600; color: var(--text); line-height: 1;
+}
+.stat-value.coral  { color: var(--coral); }
+.stat-value.amber  { color: var(--amber); }
+.stat-value.purple { color: var(--purple); }
+.stat-value.red    { color: var(--red); }
+.stat-value.green  { color: var(--green); }
+.stat-value.teal   { color: var(--teal); }
+
+/* ── Stack panel ── */
+.stack-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title {
+  font-family: var(--mono); font-size: 13px;
+  color: var(--text2); letter-spacing: .5px;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-title .icon { color: var(--coral); }
+
+/* The actual stack stage — vertical, nodes stack bottom-up */
+.stack-stage-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 24px 0;
+  min-height: 380px;
+  position: relative;
+}
+
+/* LIFO label */
+.lifo-label {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  letter-spacing: 1px; text-transform: uppercase;
+  align-self: flex-end; margin-bottom: 8px;
+}
+
+/* Stack container — visual well */
+.stack-well {
+  width: 100%;
+  max-width: 560px;
+  flex: 1;
+  border: 1px solid var(--border2);
+  border-bottom: 3px solid var(--border2);
+  border-radius: 14px 14px 6px 6px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  overflow: hidden;
+  background: rgba(255,255,255,.015);
+  position: relative;
+  min-height: 320px;
+}
+
+/* Open top indicator */
+.stack-well::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: 20px; right: 20px;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--border2) 0 8px, transparent 8px 16px);
+  border-radius: 2px;
+}
+
+.stack-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 40px;
+  text-align: center;
+}
+.stack-empty .em-bracket {
+  font-size: 52px; font-weight: 600;
+  letter-spacing: -4px; opacity: .25;
+  color: var(--text2); line-height: 1;
+}
+
+/* Each row in the stack */
+.s-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  transition: background .15s;
+  position: relative;
+}
+.s-row:first-child { border-top: none; }
+.s-row:hover { background: rgba(255,255,255,.03); }
+
+/* Index badge */
+.s-idx {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); min-width: 28px; text-align: left;
+}
+
+/* The node box */
+.s-node {
+  flex: 1;
+  height: 72px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: var(--mono);
+  border: 2px solid;
+  transition: transform .15s, box-shadow .15s;
+  cursor: default;
+}
+.s-node:hover { transform: scale(1.02); }
+
+.s-node .s-val { font-size: 24px; font-weight: 600; }
+.s-node .s-addr { font-size: 11px; opacity: .5; }
+
+.s-node.normal {
+  background: rgba(139,143,168,.07);
+  border-color: var(--border2); color: var(--text);
+}
+.s-node.top {
+  background: var(--coral-bg);
+  border-color: var(--coral); color: var(--coral);
+  box-shadow: 0 0 28px rgba(255,107,107,.18);
+}
+.s-node.second {
+  background: rgba(155,140,255,.07);
+  border-color: var(--purple-brd); color: var(--purple);
+}
+
+/* TOP label pill */
+.top-pill {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 6px;
+  letter-spacing: .5px;
+  min-width: 64px; text-align: center;
+}
+.top-pill.top    { background: var(--coral-bg);  color: var(--coral);  border: 1px solid var(--coral-brd); }
+.top-pill.mid    { opacity: 0; }
+
+/* Stack base bar */
+.stack-base {
+  width: 100%;
+  max-width: 560px;
+  height: 10px;
+  background: var(--border2);
+  border-radius: 0 0 6px 6px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.base-label {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text3); letter-spacing: .5px;
+  transform: translateY(20px);
+}
+
+/* Animations */
+@keyframes pushIn  { from { opacity:0; transform:translateY(-28px) scaleY(.7); } to { opacity:1; transform:none; } }
+@keyframes popOut  { to   { opacity:0; transform:translateY(-32px) scale(.8); } }
+@keyframes hiPulse { 0%,100% { transform:scale(1); } 45% { transform:scale(1.05); } }
+@keyframes shakeX  { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+
+.anim-push  { animation: pushIn  .35s cubic-bezier(.2,.8,.3,1) forwards; }
+.anim-pop   { animation: popOut  .28s ease-in forwards; }
+.anim-pulse { animation: hiPulse .45s ease-in-out; }
+.anim-shake { animation: shakeX  .3s ease-in-out; }
+
+/* ── Side column ── */
+.side-col { display: flex; flex-direction: column; gap: 20px; }
+
+.ctrl-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+.ctrl-title {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 16px;
+}
+.inp-row { display: flex; gap: 10px; margin-bottom: 14px; }
+input[type=text] {
+  flex: 1; height: 48px; padding: 0 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 9px; color: var(--text);
+  font-family: var(--mono); font-size: 16px;
+  outline: none; transition: border-color .2s; direction: ltr;
+}
+input[type=text]:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,107,107,.1); }
+input[type=text]::placeholder { color: var(--text3); font-size: 14px; }
+
+.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.op-btn {
+  height: 48px; border-radius: 10px; border: 1px solid;
+  font-family: var(--mono); font-size: 14px; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 8px;
+  transition: all .15s; letter-spacing: .3px;
+}
+.op-btn:hover  { filter: brightness(1.15); }
+.op-btn:active { transform: scale(.96); }
+
+.btn-push { background: var(--coral-bg);  border-color: var(--coral-brd);  color: var(--coral); }
+.btn-pop  { background: var(--amber-bg);  border-color: var(--amber-brd);  color: var(--amber); }
+.btn-peek { background: var(--purple-bg); border-color: var(--purple-brd); color: var(--purple); }
+.btn-rnd  { background: var(--green-bg);  border-color: rgba(74,222,128,.3); color: var(--green); }
+.btn-clr  { background: var(--red-bg);    border-color: var(--red-brd);    color: var(--red); grid-column: span 2; }
+
+/* ── Linked list panel ── */
+.ll-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+.ll-panel-title {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 14px;
+}
+.ll-track {
+  display: flex; flex-direction: column;
+  gap: 0; overflow-y: auto; max-height: 200px;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+.ll-track::-webkit-scrollbar { width: 3px; }
+.ll-track::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.ll-node-row {
+  display: flex; align-items: center; gap: 0; flex-shrink: 0;
+}
+.ll-node-box {
+  display: flex; border: 1px solid var(--border2);
+  border-radius: 8px; overflow: hidden;
+  font-family: var(--mono); font-size: 13px; height: 40px;
+  background: var(--bg3); flex-shrink: 0;
+}
+.ll-data {
+  padding: 0 14px; display: flex; align-items: center;
+  font-weight: 600; color: var(--text);
+  border-right: 1px solid var(--border2);
+  min-width: 48px; justify-content: center;
+}
+.ll-ptr {
+  padding: 0 10px; display: flex; align-items: center;
+  font-size: 11px; color: var(--text3);
+}
+.ll-down-arrow {
+  width: 2px; height: 20px;
+  background: var(--border2); margin: 0 19px;
+  position: relative; flex-shrink: 0; align-self: center;
+}
+.ll-down-arrow::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: -4px;
+  border-top: 7px solid var(--border2);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+}
+.ll-null {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text3); padding: 8px 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.ll-null::before {
+  content: '';
+  width: 2px; height: 20px; background: var(--border2);
+  display: inline-block;
+}
+.ll-ptr-row {
+  display: flex; gap: 14px; margin-top: 12px;
+  font-family: var(--mono); font-size: 12px;
+}
+.ptr-tag { display: flex; align-items: center; gap: 6px; color: var(--text2); }
+.ptr-pip { width: 8px; height: 8px; border-radius: 50%; }
+.top-pip  { background: var(--coral); }
+
+/* ── Log ── */
+.log-panel {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  flex: 1; display: flex; flex-direction: column;
+}
+.log-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.log-hdr-title { font-family: var(--mono); font-size: 12px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+.log-clr-btn {
+  background: none; border: none; font-family: var(--mono); font-size: 12px;
+  color: var(--text3); cursor: pointer; transition: color .15s;
+}
+.log-clr-btn:hover { color: var(--red); }
+.log-body {
+  overflow-y: auto; flex: 1; max-height: 220px; padding: 8px 0;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+.log-body::-webkit-scrollbar { width: 3px; }
+.log-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.log-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 18px; font-family: var(--mono); font-size: 13px;
+  transition: background .1s;
+}
+.log-row:hover { background: rgba(255,255,255,.03); }
+.log-pip { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.p-push { background: var(--coral); }
+.p-pop  { background: var(--amber); }
+.p-peek { background: var(--purple); }
+.p-err  { background: var(--red); }
+.p-info { background: var(--text3); }
+.log-msg { color: var(--text2); flex: 1; }
+.log-msg .hi { color: var(--text); font-weight: 500; }
+.log-ts { color: var(--text3); font-size: 11px; flex-shrink: 0; }
+
+/* ── Code strip ── */
+.code-strip {
+  grid-column: 1 / -1;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 24px;
+  font-family: var(--mono); font-size: 14px; color: var(--text2);
+  display: flex; align-items: center; gap: 16px; overflow-x: auto;
+}
+.code-strip .kw  { color: var(--purple); }
+.code-strip .fn  { color: var(--coral); }
+.code-strip .val { color: var(--amber); }
+.code-strip .cm  { color: var(--text3); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 32px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px 24px;
+  font-family: var(--mono); font-size: 14px; color: var(--text);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s; z-index: 999;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err  { border-color: var(--red-brd); color: var(--red); }
+.toast.peek { border-color: var(--purple-brd); color: var(--purple); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4"  width="16" height="4" rx="2"/>
+        <rect x="4" y="10" width="16" height="4" rx="2"/>
+        <rect x="4" y="16" width="16" height="4" rx="2"/>
+        <path d="M20 6h1M20 12h1M20 18h1" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <h1>Stack Visualizer</h1>
+      <p>هيكل بيانات المكدس — تفاعلي</p>
+    </div>
+  </div>
+  <nav class="nav-menu">
+    <a href="index.html" class="nav-link">Home</a>
+    <a href="linkedlist.html" class="nav-link ">Linked List</a>
+    <a href="stack.html" class="nav-link active">Stacks</a>
+    <a href="interactive_queue_visualizer.html" class="nav-link">Queues</a>
+    
+  </nav>
+  <div class="mode-switch">
+    <button class="mode-btn active" onclick="setMode('array')">Array</button>
+    <button class="mode-btn" onclick="setMode('linked')">Linked List</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">الحجم / Size</div>
+      <div class="stat-value coral" id="s-size">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">TOP</div>
+      <div class="stat-value coral" id="s-top">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">الـ index</div>
+      <div class="stat-value amber" id="s-idx">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">الحالة / Status</div>
+      <div class="stat-value green" id="s-status">فارغ</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">العمليات / Ops</div>
+      <div class="stat-value" id="s-ops">0</div>
+    </div>
+  </div>
+
+  <!-- Stack canvas -->
+  <div class="stack-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span class="icon">◈</span> Stack — المكدس
+        <span id="mode-badge" style="font-size:11px;background:var(--coral-bg);border:1px solid var(--coral-brd);color:var(--coral);padding:2px 10px;border-radius:5px;margin-right:8px">Array</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text3)">
+        <span id="cap-info">MAX = 8</span>
+        <span style="margin-right:16px;color:var(--text3)">LIFO — Last In First Out</span>
+      </div>
+    </div>
+
+    <div class="stack-stage-wrap">
+      <div class="lifo-label">↑ push / pop ↑</div>
+      <div class="stack-well" id="swell"></div>
+      <div class="stack-base">
+        <span class="base-label">— base —</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side column -->
+  <div class="side-col">
+
+    <!-- Controls -->
+    <div class="ctrl-panel">
+      <div class="ctrl-title">العمليات / Operations</div>
+      <div class="inp-row">
+        <input type="text" id="val-inp" placeholder="قيمة..." maxlength="6"
+               onkeydown="if(event.key==='Enter')push()">
+      </div>
+      <div class="btn-grid">
+        <button class="op-btn btn-push" onclick="push()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M8 12V4M4 7l4-4 4 4"/>
+          </svg>
+          Push
+        </button>
+        <button class="op-btn btn-pop" onclick="pop()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M8 4v8M4 9l4 4 4-4"/>
+          </svg>
+          Pop
+        </button>
+        <button class="op-btn btn-peek" onclick="peek()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="8" cy="8" r="2"/>
+            <path d="M2 8s2-4 6-4 6 4 6 4-2 4-6 4-6-4-6-4z"/>
+          </svg>
+          Peek
+        </button>
+        <button class="op-btn btn-rnd" onclick="fillRandom()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M2 8a6 6 0 1 1 12 0M14 6l-2 2-2-2"/>
+          </svg>
+          عشوائي
+        </button>
+        <button class="op-btn btn-clr" onclick="clearStack()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M3 3l10 10M13 3L3 13"/>
+          </svg>
+          مسح الكل
+        </button>
+      </div>
+    </div>
+
+    <!-- Linked list memory view -->
+    <div class="ll-panel" id="ll-panel" style="display:none">
+      <div class="ll-panel-title">تمثيل الذاكرة</div>
+      <div class="ll-track" id="ll-track"></div>
+      <div class="ll-ptr-row" id="ll-ptrs"></div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-panel">
+      <div class="log-hdr">
+        <span class="log-hdr-title">سجل العمليات</span>
+        <button class="log-clr-btn" onclick="clearLog()">مسح</button>
+      </div>
+      <div class="log-body" id="log-body"></div>
+    </div>
+
+  </div>
+
+  <!-- Code strip -->
+  <div class="code-strip" id="code-strip">
+    <span class="cm">// ابدأ بإضافة عنصر لترى الكود</span>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let stack = [];
+let mode  = 'array';
+let ops   = 0;
+const MAX = 8;
+let toastTimer;
+
+/* ── Mode switch ── */
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach((b,i) =>
+    b.classList.toggle('active', (i===0&&m==='array')||(i===1&&m==='linked')));
+  document.getElementById('mode-badge').textContent = m==='array' ? 'Array' : 'Linked List';
+  document.getElementById('cap-info').textContent   = m==='array' ? 'MAX = 8' : 'dynamic';
+  document.getElementById('ll-panel').style.display = m==='linked' ? 'block' : 'none';
+  addLog('info','تم التبديل إلى <span class="hi">'+(m==='array'?'Array':'Linked List')+'</span>');
+  render(); updateStats();
+}
+
+/* ── Push ── */
+function push() {
+  let v = document.getElementById('val-inp').value.trim();
+  if (!v) v = String(Math.floor(Math.random()*90)+10);
+  if (mode==='array' && stack.length >= MAX) {
+    showToast('المكدس ممتلئ! MAX = '+MAX, 'err');
+    addLog('err','push(<span class="hi">'+v+'</span>) — ❌ Stack Overflow'); return;
+  }
+  stack.push(v); ops++;
+  addLog('push','push(<span class="hi">'+v+'</span>) → أُضيف فوق المكدس');
+  setCode('push', v);
+  render('push');
+  updateStats();
+  document.getElementById('val-inp').value = '';
+}
+
+/* ── Pop ── */
+function pop() {
+  if (!stack.length) {
+    showToast('المكدس فارغ! Stack Underflow', 'err');
+    addLog('err','pop() — ❌ Stack Underflow'); return;
+  }
+  const v = stack[stack.length-1];
+  ops++;
+  addLog('pop','pop() → <span class="hi">'+v+'</span> خرج من القمة');
+  setCode('pop', v);
+
+  const swell = document.getElementById('swell');
+  const topRow = swell.querySelector('.s-row:last-child');
+  if (topRow) {
+    const node = topRow.querySelector('.s-node');
+    node.classList.add('anim-pop');
+    setTimeout(() => { stack.pop(); render(); updateStats(); }, 270);
+  } else { stack.pop(); render(); updateStats(); }
+}
+
+/* ── Peek ── */
+function peek() {
+  if (!stack.length) { showToast('المكدس فارغ!','err'); return; }
+  ops++;
+  const v = stack[stack.length-1];
+  addLog('peek','peek() → <span class="hi">'+v+'</span> (بدون إزالة)');
+  setCode('peek', v);
+  showToast('peek() = ' + v, 'peek');
+
+  const swell = document.getElementById('swell');
+  const topRow = swell.querySelector('.s-row:last-child');
+  if (topRow) {
+    const node = topRow.querySelector('.s-node');
+    node.classList.add('anim-pulse');
+    setTimeout(() => node.classList.remove('anim-pulse'), 500);
+  }
+  updateStats();
+}
+
+/* ── Fill random ── */
+function fillRandom() {
+  const limit = mode==='array' ? MAX : 12;
+  const n = Math.min(4, limit - stack.length);
+  if (n<=0) { showToast('المكدس ممتلئ!','err'); return; }
+  for (let i=0;i<n;i++) stack.push(String(Math.floor(Math.random()*90)+10));
+  ops += n;
+  addLog('push','أُضيف <span class="hi">'+n+'</span> عناصر عشوائية');
+  render(); updateStats();
+}
+
+/* ── Clear ── */
+function clearStack() {
+  stack = [];
+  addLog('info','تم مسح المكدس بالكامل');
+  setCode('clear');
+  render(); updateStats();
+}
+
+/* ── Render stack well ── */
+function render(anim='') {
+  const swell = document.getElementById('swell');
+  swell.innerHTML = '';
+
+  if (!stack.length) {
+    swell.innerHTML = `<div class="stack-empty">
+      <span class="em-bracket">[]</span>
+      <p>المكدس فارغ — اضغط Push لإضافة عنصر</p>
+    </div>`;
+    renderLL(); return;
+  }
+
+  stack.forEach((val, i) => {
+    const isTop    = i === stack.length - 1;
+    const isSecond = i === stack.length - 2;
+    const row = document.createElement('div');
+    row.className = 's-row';
+
+    let nodeCls = 's-node';
+    if (isTop)    nodeCls += ' top';
+    else if (isSecond) nodeCls += ' second';
+    else          nodeCls += ' normal';
+
+    if (isTop && anim==='push') nodeCls += ' anim-push';
+
+    let pillCls = 'top-pill mid';
+    let pillTxt = '&nbsp;';
+    if (isTop) { pillCls = 'top-pill top'; pillTxt = 'TOP'; }
+
+    row.innerHTML = `
+      <span class="s-idx">[${i}]</span>
+      <div class="${nodeCls}">
+        <span class="s-val">${val}</span>
+      </div>
+      <span class="${pillCls}">${pillTxt}</span>
+    `;
+    swell.appendChild(row);
+  });
+
+  renderLL();
+}
+
+/* ── Render Linked List memory view ── */
+function renderLL() {
+  const track = document.getElementById('ll-track');
+  const ptrs  = document.getElementById('ll-ptrs');
+  if (!track) return;
+  track.innerHTML = ''; ptrs.innerHTML = '';
+
+  if (!stack.length) {
+    track.innerHTML = '<span class="ll-null" style="padding:8px 0;font-family:var(--mono);font-size:12px;color:var(--text3)">NULL (فارغ)</span>';
+    return;
+  }
+
+  // Show from top to bottom (reversed)
+  const reversed = [...stack].reverse();
+  reversed.forEach((val, i) => {
+    const isLast = i === reversed.length - 1;
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.alignItems = 'flex-start';
+    wrap.innerHTML = `
+      <div class="ll-node-box" style="${i===0?'border-color:var(--coral-brd)':''}">
+        <div class="ll-data" style="${i===0?'color:var(--coral)':''}">${val}</div>
+        <div class="ll-ptr">${isLast ? 'NULL' : 'next'}</div>
+      </div>
+      ${!isLast ? '<div class="ll-down-arrow"></div>' : ''}
+    `;
+    track.appendChild(wrap);
+  });
+
+  ptrs.innerHTML = `
+    <div class="ptr-tag">
+      <span class="ptr-pip top-pip"></span>
+      top* → <strong style="color:var(--coral)">${stack[stack.length-1]}</strong>
+    </div>
+    <span style="margin-right:auto;font-family:var(--mono);font-size:11px;color:var(--text3)">${stack.length} nodes</span>
+  `;
+}
+
+/* ── Update stats ── */
+function updateStats() {
+  const n = stack.length;
+  document.getElementById('s-size').textContent = n;
+  document.getElementById('s-top').textContent  = n ? stack[n-1] : '—';
+  document.getElementById('s-idx').textContent  = n ? n-1 : '—';
+  document.getElementById('s-ops').textContent  = ops;
+  const st = document.getElementById('s-status');
+  if (!n) { st.textContent='فارغ'; st.className='stat-value green'; }
+  else if (mode==='array' && n>=MAX) { st.textContent='ممتلئ'; st.className='stat-value red'; }
+  else { st.textContent='نشط'; st.className='stat-value teal'; }
+}
+
+/* ── Code strip ── */
+function setCode(op, v) {
+  const s = document.getElementById('code-strip');
+  const n = stack.length;
+  const templates = {
+    push:  `<span class="kw">stack</span>.<span class="fn">push</span>(<span class="val">${v}</span>); <span class="cm">// top = [${n-1}]</span>`,
+    pop:   `<span class="val">${v}</span> = <span class="kw">stack</span>.<span class="fn">pop</span>(); <span class="cm">// top يتراجع إلى [${n}]</span>`,
+    peek:  `<span class="val">${v}</span> = <span class="kw">stack</span>.<span class="fn">peek</span>(); <span class="cm">// بدون إزالة</span>`,
+    clear: `<span class="kw">stack</span>.<span class="fn">clear</span>(); <span class="cm">// size = 0</span>`,
+  };
+  s.innerHTML = templates[op] || '';
+}
+
+/* ── Log ── */
+function addLog(type, msg) {
+  const body = document.getElementById('log-body');
+  const now  = new Date();
+  const ts   = [now.getHours(),now.getMinutes(),now.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
+  const dotMap = { push:'p-push', pop:'p-pop', peek:'p-peek', err:'p-err', info:'p-info' };
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `<span class="log-pip ${dotMap[type]||'p-info'}"></span><span class="log-msg">${msg}</span><span class="log-ts">${ts}</span>`;
+  body.insertBefore(row, body.firstChild);
+  while (body.children.length > 40) body.removeChild(body.lastChild);
+}
+function clearLog() { document.getElementById('log-body').innerHTML = ''; }
+
+/* ── Toast ── */
+function showToast(msg, cls='') {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast '+cls+' show';
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* init */
+render(); updateStats();
+addLog('info','Stack Visualizer جاهز — ابدأ بـ Push!');
+</script>
+</body>
+</html>

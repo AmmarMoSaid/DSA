@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Queue Visualizer</title>
+<title>DSA Visualizer</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -114,6 +114,7 @@ header {
 .nav-menu {
   display: flex;
   gap: 20px;
+margin: auto;
 }
 .nav-link {
   color: var(--text2);
@@ -151,6 +152,10 @@ main {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 16px;
+ 
+  justify-content: center; /* التوسيط أفقيًا */
+ /* التوسيط عموديًا */
+  
 }
 .stat-card {
   background: var(--bg2);
@@ -610,6 +615,58 @@ input[type=text]::placeholder { color: var(--text3); font-size: 14px; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.err   { border-color: var(--red-brd);  color: var(--red); }
 .toast.peek  { border-color: var(--purple-brd); color: var(--purple); }
+.hero-image-container {
+  grid-column: 1 / -1; /* لجعل الحاوية تأخذ عرض الصفحة كاملاً */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background: var(--bg2); /* استخدام نفس لون الخلفية في الكود */
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.centered-img {
+  width: 60%;       /* تجعل الصورة تأخذ 80% من عرض الحاوية */
+  height: auto;     /* تحافظ على أبعاد الصورة الأصلية (تناسب الطول مع العرض) */
+  display: block;
+  margin: 0 auto;   /* تضمن بقاءها في المنتصف */
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  /* إضافة توهج (Glow) خفيف حول الصورة ليناسب طابع الـ Dark Mode */
+  box-shadow: 0 0 40px rgba(0, 212, 170, 0.15); 
+  transition: transform 0.3s ease;
+  margin-bottom: 50px;
+}
+
+.centered-img:hover {
+  transform: scale(1.02); /* تأثير تكبير بسيط عند المرور بالماوس */
+}
+
+.overlay-text {
+  margin-top: 20px;
+  font-family: var(--mono);
+  color: var(--teal);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+/* مثال لتحريك الأيقونة في المنتصف */
+.hero-icon-big {
+  width: 150px;
+  height: 150px;
+  filter: drop-shadow(0 0 15px var(--teal));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
 </style>
 </head>
 <body>
@@ -630,7 +687,44 @@ input[type=text]::placeholder { color: var(--text3); font-size: 14px; }
   </div>
   <nav class="nav-menu">
     <a href="index.html" class="nav-link active">Home</a>
+    <a href="linkedlist.html" class="nav-link">linkedlist</a>
     <a href="stack.html" class="nav-link">Stacks</a>
     <a href="interactive_queue_visualizer.html" class="nav-link ">Queues</a>
   </nav>
+
 </header>
+<body>
+  
+  <main>
+  <div class="hero-image-container">
+    <img src="img/data_structures_overview.svg" alt="DSA Visualization" class="centered-img">
+    <img src="img/physical_structures_memory.svg" alt="" class="centered-img">
+    <img src="img/logical_structures_linear_nonlinear.svg" alt="" class="centered-img">
+    <div class="overlay-text">استكشف هياكل البيانات بصرياً</div>
+  </div>
+</main>
+   <main>
+  <section class="hero">
+    <h2>مرحباً بك في عالم هياكل البيانات</h2>
+    <p>تعلم برمجياً من خلال التفاعل البصري مع الـ Algorithms</p>
+  </section>
+
+
+
+  <div class="stats-row" style=" margin-right: 100px ; position: relative;">
+   
+    <div class="stat-card">
+      <span class="stat-label">المكدسات</span>
+      <span class="stat-value purple">Stacks</span>
+    </div>
+     <div class="stat-card">
+      <span class="stat-label">القوائم المرتبطة</span>
+      <span class="stat-value amber">Linked Lists</span>
+    </div>
+     <div class="stat-card">
+      <span class="stat-label">طابور</span>
+      <span class="stat-value teal">Queues</span>
+    </div>
+    </div>
+</main>
+</body>
