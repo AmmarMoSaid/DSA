@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Structures - Step-by-Step Exam</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --navy: #0d1b2a; --navy2: #1b2d42; --teal: #00c9a7; --teal-dim: rgba(0, 201, 167, 0.12);
+        --red: #ff4d6d; --red-dim: rgba(255, 77, 109, 0.12); --gold: #f5a623; --white: #f0f4f8;
+        --muted: #8899aa; --card: #162032; --border: rgba(255, 255, 255, 0.07); --mono: 'IBM Plex Mono', monospace;
+      }
+      body { background-color: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
+      .container { max-width: 900px; margin: 0 auto; }
+      header { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+      .header-info h1 { margin: 0; font-family: 'Syne', sans-serif; font-size: 24px; color: var(--teal); }
+      .timer { font-family: var(--mono); font-size: 20px; background: var(--teal-dim); padding: 10px 20px; border-radius: 12px; color: var(--teal); border: 1px solid var(--teal); }
+      
+      .question-card { background: var(--card); padding: 30px; border-radius: 20px; margin-bottom: 30px; border: 1px solid var(--border); transition: 0.3s; }
+      .q-num { color: var(--teal); font-family: var(--mono); font-weight: bold; margin-bottom: 10px; display: block; }
+      .question-text { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+      .code-block { background: #0a121d; padding: 15px; border-radius: 10px; font-family: var(--mono); color: var(--gold); margin: 15px 0; border-left: 3px solid var(--gold); white-space: pre-wrap; font-size: 14px; }
+      
+      .options { display: grid; gap: 12px; }
+      .option { padding: 16px 20px; background: var(--navy2); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: 0.2s; position: relative; }
+      .option:hover:not(.disabled) { border-color: var(--teal); background: var(--teal-dim); }
+      .option.selected { border-color: var(--teal); background: var(--teal-dim); }
+      .option.disabled { cursor: default; }
+      
+      .confirm-btn { margin-top: 20px; padding: 12px 25px; background: transparent; color: var(--teal); border: 1px solid var(--teal); border-radius: 10px; cursor: pointer; font-weight: 700; font-family: 'Syne', sans-serif; transition: 0.3s; }
+      .confirm-btn:hover:not(:disabled) { background: var(--teal); color: var(--navy); }
+      .confirm-btn:disabled { border-color: var(--muted); color: var(--muted); cursor: not-allowed; }
+
+      .explanation { margin-top: 20px; padding: 15px; background: rgba(245, 166, 35, 0.08); border-left: 4px solid var(--gold); border-radius: 8px; display: none; color: #ffcc80; font-size: 14px; }
+      .correct { border-color: var(--teal) !important; background: var(--teal-dim) !important; color: var(--teal); font-weight: bold; }
+      .wrong { border-color: var(--red) !important; background: var(--red-dim) !important; color: var(--red); }
+      
+      #score-float { position: fixed; bottom: 20px; right: 20px; background: var(--teal); color: var(--navy); padding: 15px 25px; border-radius: 50px; font-weight: 800; box-shadow: 0 10px 20px rgba(0,0,0,0.3); z-index: 1000; }
+    </style>
+  </head>
+  <body>
+    <div id="score-float">Score: <span id="current-score">0</span> / 30</div>
+
+    <div class="container">
+      <header>
+        <div class="header-info">
+          <h1>DS Midterm - Step-by-Step</h1>
+          <p style="color: var(--muted)">Answer each question then click 'Confirm'</p>
+        </div>
+        <div class="timer" id="timer">50:00</div>
+      </header>
+
+      <div id="quiz-container"></div>
+    </div>
+
+    <script>
+      const questions = [
+        { q: "In Selection Sort, how many iterations are needed to sort an 8-element array?", options: ["8", "7", "6", "1"], correct: 1, explanation: "Selection sort always requires (n-1) passes to find and swap minimum elements." },
+        { q: "Time complexity of this snippet?", code: "int i = n;\nwhile(i > 0) {\n  cout << i << endl;\n  i = i / 2;\n}", options: ["O(n)", "O(log n)", "O(n^2)", "O(1)"], correct: 1, explanation: "Logarithmic time occurs when the problem size is halved in each step." },
+        { q: "Time complexity of Merge Sort?", options: ["O(n)", "O(log n)", "O(n^2)", "O(n log n)"], correct: 3, explanation: "Merge Sort is consistently O(n log n) across best, average, and worst cases." },
+        { q: "Time complexity of Selection Sort?", options: ["O(n)", "O(log n)", "O(n^2)", "O(n log n)"], correct: 2, explanation: "Nested loops lead to O(n^2) complexity." },
+        { q: "Best-case complexity of Binary Search?", options: ["O(n)", "O(log n)", "O(n^2)", "O(1)"], correct: 3, explanation: "If target is the middle element in the first try, it's O(1)." },
+        { q: "Queue access policy is:", options: ["LIFO", "FILO", "FIFO", "LILO"], correct: 2, explanation: "First-In First-Out." },
+        { q: "Condition for a full Circular Queue?", options: ["front == rear", "front == (rear + 1) % maxsize", "rear == maxsize", "front == 0"], correct: 1, explanation: "When the next rear position matches front." },
+        { q: "If front=3 and queue has 5 elements, next enqueue at index:", options: ["3", "5", "8", "2"], correct: 2, explanation: "3,4,5,6,7 are occupied. Index 8 is next." },
+        { q: "Circular Queue: front=7. After enqueue(2), front is:", options: ["0", "7", "8", "1"], correct: 1, explanation: "Front only changes during dequeue operations." },
+        { q: "Circular Queue size 8, rear=7. After enqueue(2), rear is:", options: ["7", "8", "0", "1"], correct: 2, explanation: "(7+1)%8 = index 0." },
+        { q: "When does front == rear?", options: ["After dequeue(), enqueue(1), dequeue()", "When full", "Always", "Never"], correct: 0, explanation: "When the queue becomes empty." },
+        { q: "S=(W,X,Y) [W=Top], Q=(P,H,L) [P=Front]. Q.enqueue(S.top()); Q.enqueue(S.top()); Q is:", options: ["(P,H,L,W,X)", "(P,H,L,W,W)", "(W,W,P,H,L)", "(P,H,L,Y,Y)"], correct: 1, explanation: "W is added twice to the end of Q." },
+        { q: "S=(W,X,Y), Q=(P,H,L). After S.push(Q.dequeue()); Q.enqueue(S.top()); S.pop(); S is:", options: ["(W,X,Y)", "(P,W,X,Y)", "(H,L,W,X,Y)", "(X,Y)"], correct: 0, explanation: "P is pushed then popped immediately." },
+        { q: "Transfer S to Q then back to S. Final S for S=(W,X,Y)?", options: ["(W,X,Y,P,H,L)", "(Y,X,W,L,H,P)", "(P,H,L,W,X,Y)", "(W,X,Y)"], correct: 1, explanation: "Order reverses twice." },
+        { q: "while(!S.isEmpty()){ print(pop()); print(top()); } for S=(W,X,Y)?", options: ["WXY", "WXXYY", "WWXXY", "Error"], correct: 1, explanation: "W (pop) -> X (top) -> X (pop) -> Y (top) -> Y (pop)." },
+        { q: "Postfix: 2 3 * 5 9 4 + - 7 + *", options: ["28", "7", "14", "-6"], correct: 3, explanation: "6 * (5 - 13 + 7) = 6 * -1 = -6." },
+        { q: "Postfix of X*Y + W*Z - V is:", options: ["XY*WZ*V-", "XY*WZ*+V-", "XYWZ*+*V-", "X*Y+W*Z-V"], correct: 1, explanation: "Multiply, Multiply, Add, Subtract." },
+        { q: "1st pass Selection Sort on [45, 28, 50, 18, 41, 9, 33, 35]:", options: ["[9, 45, 50, 18, 41, 28, 33, 35]", "[28, 45, 18, 41, 9, 33, 35, 50]", "[9, 28, 50, 18, 41, 45, 33, 35]", "None"], correct: 2, explanation: "Min 9 swaps with first element 45." },
+        { q: "2nd pass Bubble Sort on [45, 28, 50, 18, 41, 9, 33, 35]:", options: ["[28, 18, 41, 9, 33, 35, 45, 50]", "[28, 45, 18, 41, 9, 33, 35, 50]", "[9, 18, 28, 33, 35, 41, 45, 50]", "None"], correct: 0, explanation: "Pass 1 bubbles 50, Pass 2 bubbles 45." },
+        { q: "4th pass Insertion Sort on [45, 28, 50, 18, 41, 9, 33, 35]:", options: ["[18, 28, 45, 50, 41, 9, 33, 35]", "[18, 28, 41, 45, 50, 9, 33, 35]", "[9, 18, 28, 41, 45, 50, 33, 35]", "None"], correct: 1, explanation: "After 4 passes, first 5 elements are sorted relative to each other." },
+        { q: "Recursion levels in Merge Sort for 8 elements?", options: ["4", "3", "8", "1"], correct: 1, explanation: "Log2(8) = 3 levels of recursive splitting." },
+        { q: "Worst case of Linear Search?", options: ["O(n)", "O(log n)", "O(1)", "O(n^2)"], correct: 0, explanation: "Item is at end or not present." },
+        { q: "Iterations to find 14 in [2,4,6,8,10,12,14,16,18,20] (Binary Search)?", options: ["3", "4", "5", "6"], correct: 1, explanation: "Checks: 10, 16, 12, 14." },
+        { q: "Binary Search result for 157 in previous array?", options: ["5", "6", "7", "-1"], correct: 3, explanation: "Not found." },
+        { q: "Binary Search result for 5 in previous array?", options: ["5", "6", "7", "-1"], correct: 3, explanation: "Not found." },
+        { q: "Code (Q26): while (_______)", options: ["low > high", "low <= high", "low == high", "true"], correct: 1, explanation: "Valid search range." },
+        { q: "Code (Q27): Formula for mid?", options: ["(low+high)/2", "(low+size)/2", "low+high+1", "high-low"], correct: 0, explanation: "Arithmetic average." },
+        { q: "Code (Q28): if (_______) return mid;", options: ["arr[mid] < item", "arr[mid] > item", "arr[mid] == item", "item == 0"], correct: 2, explanation: "Item found." },
+        { q: "Code (Q29): if (item < arr[mid]) _______", options: ["low = mid + 1", "high = mid - 1", "high = mid", "return -1"], correct: 1, explanation: "Search left half." },
+        { q: "Code (Q30): else _______", options: ["low = mid + 1", "high = mid - 1", "low = mid", "return 0"], correct: 0, explanation: "Search right half." }
+      ];
+
+      let score = 0;
+      let timerSeconds = 50 * 60;
+      let selected = new Array(questions.length).fill(null);
+
+      function render() {
+        const container = document.getElementById('quiz-container');
+        questions.forEach((item, index) => {
+          const card = document.createElement('div');
+          card.className = 'question-card';
+          card.id = `q-card-${index}`;
+          card.innerHTML = `
+            <span class="q-num">QUESTION ${index + 1}</span>
+            <div class="question-text">${item.q}</div>
+            ${item.code ? `<div class="code-block">${item.code}</div>` : ''}
+            <div class="options" id="opts-${index}">
+              ${item.options.map((opt, i) => `<div class="option" id="opt-${index}-${i}" onclick="select(${index}, ${i})">${opt}</div>`).join('')}
+            </div>
+            <button class="confirm-btn" id="btn-${index}" onclick="confirmAns(${index})">Confirm Answer</button>
+            <div class="explanation" id="exp-${index}"><strong>Explanation:</strong> ${item.explanation}</div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      function select(qIdx, optIdx) {
+        if (document.getElementById(`btn-${qIdx}`).disabled) return;
+        selected[qIdx] = optIdx;
+        document.querySelectorAll(`#opts-${qIdx} .option`).forEach((el, i) => el.classList.toggle('selected', i === optIdx));
+      }
+
+      function confirmAns(index) {
+        if (selected[index] === null) { alert("Please select an answer first!"); return; }
+        
+        const btn = document.getElementById(`btn-${index}`);
+        const exp = document.getElementById(`exp-${index}`);
+        const correctIdx = questions[index].correct;
+        const userIdx = selected[index];
+
+        btn.disabled = true;
+        exp.style.display = 'block';
+
+        // Styling options
+        document.querySelectorAll(`#opts-${index} .option`).forEach(opt => opt.classList.add('disabled'));
+        document.getElementById(`opt-${index}-${correctIdx}`).classList.add('correct');
+        
+        if (userIdx === correctIdx) {
+          score++;
+          document.getElementById('current-score').textContent = score;
+        } else {
+          document.getElementById(`opt-${index}-${userIdx}`).classList.add('wrong');
+        }
+      }
+
+      function startTimer() {
+        setInterval(() => {
+          timerSeconds--;
+          const m = Math.floor(timerSeconds/60), s = timerSeconds%60;
+          document.getElementById('timer').textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+          if (timerSeconds <= 0) alert("Time is up!");
+        }, 1000);
+      }
+
+      render(); startTimer();
+    </script>
+  </body>
+</html>
