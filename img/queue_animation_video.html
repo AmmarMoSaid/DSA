@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Queue — Simple vs Circular</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Fira+Code:wght@400;500&display=swap');
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:       #0d0f14;
+  --surface:  #161925;
+  --surface2: #0f1118;
+  --border:   #2a2d3a;
+  --border2:  #1e2235;
+  --text:     #e8eaf0;
+  --muted:    #7a8099;
+  --dim:      #3a3f55;
+  --blue:     #4f9cf9;
+  --blue-bg:  #1a2540;
+  --blue-b:   #1a3a6e;
+  --green:    #4ade80;
+  --green-bg: #1e2f1e;
+  --green-b:  #0f3320;
+  --orange:   #fb923c;
+  --orange-bg:#2d1a00;
+  --red:      #ff4d6d;
+  --red-bg:   #1f1015;
+  --purple:   #c084fc;
+  --purple-bg:#2a1f35;
+  --cell-w: clamp(44px, 8vw, 68px);
+  --cell-h: clamp(40px, 7vw, 56px);
+  --cell-r: clamp(6px, 1.5vw, 10px);
+  --cell-fs: clamp(13px, 2.5vw, 18px);
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cairo', sans-serif;
+  overflow: hidden;
+}
+
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none; z-index:0;
+}
+
+#scene {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 1;
+}
+
+/* ── SLIDES ── */
+.slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .45s ease;
+  padding: clamp(16px, 4vw, 48px) clamp(16px, 5vw, 64px);
+  padding-bottom: clamp(72px, 12vh, 100px);
+}
+.slide.active { opacity:1; pointer-events:all; }
+
+/* ── TYPOGRAPHY ── */
+.big-title {
+  font-size: clamp(24px, 5.5vw, 44px);
+  font-weight: 900; letter-spacing: -1px;
+  color: #fff; text-align: center; line-height: 1.2;
+}
+.big-title span { color: var(--blue); }
+
+.subtitle {
+  font-size: clamp(13px, 2vw, 17px);
+  color: var(--muted); margin-top: 10px; text-align: center;
+}
+
+.slide-title {
+  font-size: clamp(15px, 2.8vw, 22px);
+  font-weight: 700; color: #fff;
+  margin-bottom: clamp(14px, 3vh, 28px);
+  text-align: center;
+}
+.slide-title span { color: var(--blue); }
+
+/* ── CELLS ── */
+.cells-row {
+  display: flex;
+  gap: clamp(4px, 1vw, 8px);
+  align-items: flex-start;
+  flex-wrap: nowrap;
+}
+
+.cell-wrap {
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, .8vh, 6px);
+}
+
+.cell {
+  width: var(--cell-w);
+  height: var(--cell-h);
+  border-radius: var(--cell-r);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fira Code', monospace;
+  font-size: var(--cell-fs);
+  font-weight: 500;
+  color: var(--dim);
+  transition: all .4s cubic-bezier(.34,1.56,.64,1);
+}
+.cell.filled  { background: var(--blue-bg);   border-color: var(--blue);   color: #a8d4ff; }
+.cell.wasted  { background: var(--red-bg);    border-color: var(--red);    color: var(--red); border-style: dashed; }
+.cell.wrap-in { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); transform: scale(1.08); }
+.cell.pulse   { animation: pulse 1.5s ease infinite; }
+
+.cell-idx {
+  font-size: clamp(9px, 1.5vw, 11px);
+  color: var(--dim);
+  font-family: 'Fira Code', monospace;
+}
+
+.ptr-label {
+  font-size: clamp(9px, 1.4vw, 12px);
+  font-weight: 600;
+  padding: 2px clamp(5px, 1vw, 10px);
+  border-radius: 20px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .4s ease, transform .4s ease;
+  transform: translateY(4px);
+}
+.ptr-label.show  { opacity:1; transform:translateY(0); }
+.ptr-label.front { background: var(--green-b);  color: var(--green);  border: 1px solid var(--green); }
+.ptr-label.rear  { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange); }
+
+/* ── CAPTION ── */
+.caption {
+  position: absolute;
+  bottom: clamp(48px, 9vh, 72px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: clamp(8px, 2vw, 12px);
+  padding: clamp(10px, 2vh, 14px) clamp(16px, 3vw, 28px);
+  font-size: clamp(12px, 1.8vw, 15px);
+  color: #c8cce0;
+  text-align: center;
+  width: clamp(260px, 80vw, 700px);
+  line-height: 1.7;
+  direction: rtl;
+}
+.caption strong { color: #fff; }
+.warn { color: var(--red); }
+.good { color: var(--green); }
+
+/* ── FORMULA ── */
+.formula-box {
+  background: #0d1525;
+  border: 1px solid var(--blue-b);
+  border-radius: 10px;
+  padding: clamp(10px, 2vh, 14px) clamp(20px, 4vw, 28px);
+  font-family: 'Fira Code', monospace;
+  font-size: clamp(14px, 2.5vw, 20px);
+  color: var(--blue);
+  text-align: center;
+  margin: clamp(6px, 1.5vh, 10px) 0;
+  direction: ltr;
+}
+
+/* ── TWO COL ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(12px, 2.5vw, 32px);
+  width: 100%;
+}
+.col-box {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: clamp(10px, 2vw, 14px);
+  padding: clamp(12px, 2.5vw, 20px);
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.5vh, 14px);
+}
+.col-label {
+  font-size: clamp(11px, 1.6vw, 13px);
+  font-weight: 600; letter-spacing: .5px;
+  padding: 3px clamp(8px, 1.5vw, 14px);
+  border-radius: 20px;
+}
+.col-label.bad  { background: var(--red-bg);    color: var(--red);   border: 1px solid var(--red); }
+.col-label.good { background: var(--green-b);   color: var(--green); border: 1px solid var(--green); }
+.verdict {
+  font-size: clamp(11px, 1.6vw, 13px);
+  color: var(--muted); text-align: center; line-height: 1.6;
+}
+.verdict strong { color: var(--text); }
+
+/* ── PROGRESS ── */
+#progress-bar {
+  position: absolute; bottom: 0; left: 0;
+  height: 3px; background: var(--blue);
+  border-radius: 0 2px 2px 0;
+  transition: width .5s ease;
+  z-index: 10;
+}
+
+/* ── DOTS ── */
+#dots {
+  position: absolute;
+  top: clamp(10px, 2vh, 20px);
+  left: 50%; transform: translateX(-50%);
+  display: flex; gap: clamp(5px, 1vw, 7px);
+  z-index: 10;
+}
+.dot {
+  width: clamp(5px, 1.2vw, 7px);
+  height: clamp(5px, 1.2vw, 7px);
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+  transition: background .3s, transform .3s;
+}
+.dot.active { background: var(--blue); transform: scale(1.3); }
+.dot.done   { background: var(--blue); opacity: .4; }
+
+/* ── NAV ── */
+#nav {
+  position: absolute;
+  bottom: clamp(10px, 2vh, 16px);
+  left: 50%; transform: translateX(-50%);
+  display: flex; gap: clamp(6px, 1.5vw, 10px);
+  z-index: 10;
+}
+#nav button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: clamp(6px, 1.5vw, 8px);
+  padding: clamp(5px, 1vh, 7px) clamp(12px, 2.5vw, 18px);
+  font-size: clamp(12px, 1.8vw, 14px);
+  cursor: pointer;
+  transition: all .2s;
+  font-family: 'Cairo', sans-serif;
+  white-space: nowrap;
+}
+#nav button:hover { background: #252a40; color: #fff; }
+#nav button.primary { background: #1a3a6e; border-color: var(--blue); color: var(--blue); }
+#nav button.primary:hover { background: #1f4580; color: #7ab8ff; }
+
+/* ── FADE UP ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.fade-up      { animation: fadeUp .6s ease forwards; }
+.fade-up.d1   { animation-delay:.1s; opacity:0; }
+.fade-up.d2   { animation-delay:.3s; opacity:0; }
+.fade-up.d3   { animation-delay:.5s; opacity:0; }
+
+@keyframes pulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(79,156,249,.4); }
+  50%      { box-shadow:0 0 0 8px rgba(79,156,249,0); }
+}
+
+/* ── STATS ROW (slide 0) ── */
+.stats-row {
+  margin-top: clamp(20px, 4vh, 36px);
+  display: flex; gap: clamp(20px, 5vw, 40px);
+  align-items: center;
+}
+.stat-divider { width: 1px; background: var(--border2); align-self: stretch; }
+.stat-num {
+  font-size: clamp(20px, 4vw, 28px);
+  font-weight: 900;
+}
+.stat-lbl {
+  font-size: clamp(10px, 1.5vw, 12px);
+  color: var(--muted); margin-top: 4px;
+  text-align: center; line-height: 1.5;
+}
+
+/* ── MODULO CARDS (slide 4) ── */
+.mod-cards {
+  display: flex;
+  gap: clamp(8px, 2vw, 32px);
+  margin-top: clamp(4px, 1vh, 4px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.mod-card {
+  text-align: center;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: clamp(10px, 2vh, 14px) clamp(14px, 2.5vw, 24px);
+}
+.mod-card .eq {
+  font-family: 'Fira Code', monospace;
+  font-size: clamp(11px, 1.8vw, 14px);
+  direction: ltr;
+}
+.mod-card .lbl {
+  font-size: clamp(10px, 1.4vw, 12px);
+  color: var(--muted); margin-top: 6px;
+}
+
+/* ── OUTRO GRID (slide 7) ── */
+.outro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(8px, 2vw, 16px);
+  width: clamp(240px, 70vw, 580px);
+}
+.outro-card {
+  background: var(--surface2);
+  border: 1px solid var(--blue-b);
+  border-radius: 10px;
+  padding: clamp(10px, 2vh, 14px);
+  text-align: center;
+}
+.outro-card .lbl { font-size: clamp(10px, 1.4vw, 12px); color: var(--muted); margin-bottom: 6px; }
+.outro-card .val { font-size: clamp(13px, 2.2vw, 16px); font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="dots"></div>
+
+  <!-- S0: Intro -->
+  <div class="slide active" id="s0">
+    <div class="big-title fade-up d1">Queue في C++</div>
+    <div class="big-title fade-up d2"><span>Simple</span> vs <span>Circular</span></div>
+    <div class="subtitle fade-up d3">ليه الـCircular Queue أذكى في استخدام الذاكرة؟</div>
+    <div class="stats-row fade-up d3">
+      <div style="text-align:center">
+        <div class="stat-num" style="color:var(--red)">40%</div>
+        <div class="stat-lbl">ذاكرة مهدرة<br>في Simple Queue</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div style="text-align:center">
+        <div class="stat-num" style="color:var(--green)">0%</div>
+        <div class="stat-lbl">ذاكرة مهدرة<br>في Circular Queue</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S1 -->
+  <div class="slide" id="s1">
+    <div class="slide-title">Simple Queue — نملأ الطابور</div>
+    <div class="cells-row" id="s1-cells"></div>
+    <div class="caption" id="s1-cap">عندنا مصفوفة حجم 5 — كل خانة فاضية في البداية</div>
+  </div>
+
+  <!-- S2 -->
+  <div class="slide" id="s2">
+    <div class="slide-title">Simple Queue — نشيل من الأول</div>
+    <div class="cells-row" id="s2-cells"></div>
+    <div class="caption" id="s2-cap">كل dequeue يحرّك <strong>front</strong> للأمام — الخانات الأولى لا تُستخدم أبداً</div>
+  </div>
+
+  <!-- S3 -->
+  <div class="slide" id="s3">
+    <div class="slide-title">المشكلة: <span style="color:var(--red)">Overflow وهمي</span></div>
+    <div class="cells-row" id="s3-cells"></div>
+    <div class="caption"><span class="warn">rear وصل آخر خانة</span> — لو حاولنا نضيف عنصر جديد الطابور يقول <strong>"مليان"</strong><br>بس في <strong>3 خانات حمرا فاضية</strong> مش بتستخدم أبداً!</div>
+  </div>
+
+  <!-- S4 -->
+  <div class="slide" id="s4">
+    <div class="slide-title">الحل: سطر واحد بس</div>
+    <div class="formula-box fade-up d1">rear = (rear + 1) % SIZE</div>
+    <div style="font-size:clamp(12px,1.8vw,15px); color:var(--muted); text-align:center; margin:8px 0 12px;" class="fade-up d2">
+      بدل ما rear يقف عند النهاية — يلفّ للبداية
+    </div>
+    <div class="mod-cards fade-up d3">
+      <div class="mod-card">
+        <div class="eq" style="color:var(--red)">(4 + 1) % 5 = 0</div>
+        <div class="lbl">من آخر خانة ← للأولى</div>
+      </div>
+      <div class="mod-card">
+        <div class="eq" style="color:var(--blue)">(2 + 1) % 5 = 3</div>
+        <div class="lbl">في النص — عادي</div>
+      </div>
+      <div class="mod-card">
+        <div class="eq" style="color:var(--purple)">(front+1) % SIZE</div>
+        <div class="lbl">نفس الفكرة لـfront</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S5 -->
+  <div class="slide" id="s5">
+    <div class="slide-title">Circular Queue — نفس السيناريو</div>
+    <div class="cells-row" id="s5-cells"></div>
+    <div class="caption" id="s5-cap">نفس الخطوات — نملأ، نشيل 3، نضيف جديد</div>
+  </div>
+
+  <!-- S6 -->
+  <div class="slide" id="s6">
+    <div class="slide-title">المقارنة النهائية</div>
+    <div class="two-col">
+      <div class="col-box">
+        <span class="col-label bad">Simple Queue</span>
+        <div class="cells-row" id="s6-sq"></div>
+        <div class="verdict"><strong style="color:var(--red)">3 خانات مهدرة</strong><br>rear عند [4] — لا يمكن إضافة رغم وجود مساحة</div>
+      </div>
+      <div class="col-box">
+        <span class="col-label good">Circular Queue</span>
+        <div class="cells-row" id="s6-cq"></div>
+        <div class="verdict"><strong style="color:var(--green)">0 خانات مهدرة</strong><br>rear لفّ واستخدم الخانات الحرة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S7 -->
+  <div class="slide" id="s7">
+    <div class="big-title fade-up d1" style="font-size:clamp(20px,4vw,34px)">الفرق في سطر واحد</div>
+    <div class="formula-box fade-up d2" style="margin:clamp(12px,3vh,20px) 0">rear = (rear + 1) % SIZE</div>
+    <div class="outro-grid fade-up d3">
+      <div class="outro-card">
+        <div class="lbl">استخدام الذاكرة</div>
+        <div class="val" style="color:var(--green)">100% كفاءة</div>
+      </div>
+      <div class="outro-card">
+        <div class="lbl">كل العمليات</div>
+        <div class="val" style="color:var(--blue)">O(1) ثابتة</div>
+      </div>
+    </div>
+    <div style="margin-top:clamp(12px,3vh,24px); font-size:clamp(11px,1.6vw,14px); color:var(--muted); text-align:center;" class="fade-up d3">
+      مناسب لـ OS schedulers · network buffers · audio streams
+    </div>
+  </div>
+
+  <div id="nav">
+    <button id="btn-prev" onclick="prevSlide()">→ السابق</button>
+    <button id="btn-next" onclick="nextSlide()" class="primary">التالي ←</button>
+  </div>
+  <div id="progress-bar"></div>
+</div>
+
+<script>
+const TOTAL = 8;
+let current = 0, animTimer = null;
+
+function makeCell(val, cls, ptrs) {
+  const wrap = document.createElement('div');
+  wrap.className = 'cell-wrap';
+  const c = document.createElement('div');
+  c.className = 'cell ' + (cls || '');
+  c.textContent = val === null ? '—' : val;
+  wrap.appendChild(c);
+  const ix = document.createElement('div');
+  ix.className = 'cell-idx';
+  ix.textContent = ptrs.idx !== undefined ? '[' + ptrs.idx + ']' : '';
+  wrap.appendChild(ix);
+  const p = document.createElement('div');
+  p.className = 'ptr-label ' + (ptrs.type || '');
+  p.textContent = ptrs.label || '';
+  if (ptrs.label) p.classList.add('show');
+  wrap.appendChild(p);
+  return { wrap, cell: c, ptr: p };
+}
+
+function renderRow(id, cells) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = '';
+  cells.forEach(c => el.appendChild(c.wrap));
+}
+
+function setupS1() {
+  renderRow('s1-cells', [10,20,30,40,50].map((v,i) => makeCell(v,'filled',
+    i===0?{idx:i,label:'front',type:'front'}:i===4?{idx:i,label:'rear',type:'rear'}:{idx:i}
+  )));
+  let step=0; const cap=document.getElementById('s1-cap');
+  const steps=[
+    'عندنا مصفوفة حجم 5 — كل خانة فاضية في البداية',
+    'نعمل enqueue(10) — يروح في arr[0] — front=0, rear=0',
+    'enqueue(20) → arr[1] — rear يتحرك لـ[1]',
+    'enqueue(30) → arr[2] — rear يتحرك لـ[2]',
+    'enqueue(40) → arr[3]',
+    'enqueue(50) → arr[4] — <strong>الطابور اتملأ بالكامل</strong>',
+  ];
+  clearTimeout(animTimer);
+  (function tick(){ if(step<steps.length){ cap.innerHTML=steps[step++]; animTimer=setTimeout(tick,1800); } })();
+}
+
+function setupS2() {
+  renderRow('s2-cells', [null,null,null,40,50].map((v,i) => makeCell(v,
+    ['wasted','wasted','wasted','filled','filled'][i],
+    [{idx:0},{idx:1},{idx:2},{idx:3,label:'front',type:'front'},{idx:4,label:'rear',type:'rear'}][i]
+  )));
+  let step=0; const cap=document.getElementById('s2-cap');
+  const steps=[
+    'نعمل dequeue() — نشيل 10، front يتحرك من [0] إلى [1]',
+    'dequeue() تاني — نشيل 20، front → [2]',
+    'dequeue() — نشيل 30، front → [3]',
+    'الخانات [0][1][2] أصبحت <span class="warn">مهدرة للأبد</span> — front مش بيرجع للخلف أبداً',
+  ];
+  clearTimeout(animTimer);
+  (function tick(){ if(step<steps.length){ cap.innerHTML=steps[step++]; animTimer=setTimeout(tick,1900); } })();
+}
+
+function setupS3() {
+  renderRow('s3-cells', [null,null,null,40,50].map((v,i) => makeCell(v,
+    ['wasted','wasted','wasted','filled','filled pulse'][i],
+    [{idx:0},{idx:1},{idx:2},{idx:3,label:'front',type:'front'},{idx:4,label:'rear',type:'rear'}][i]
+  )));
+}
+
+function setupS5() {
+  renderRow('s5-cells', [30,40,null,10,20].map((v,i) => makeCell(v,
+    ['wrap-in','wrap-in','','filled','filled'][i],
+    [{idx:0,label:'rear',type:'rear'},{idx:1},{idx:2},{idx:3,label:'front',type:'front'},{idx:4}][i]
+  )));
+  let step=0; const cap=document.getElementById('s5-cap');
+  const steps=[
+    'نفس البداية — نملأ الكل: [0]10 [1]20 [2]30 [3]40 [4]50',
+    'dequeue x3 — نشيل 10,20,30 — front → [3]',
+    'الآن نضيف enqueue(40): rear = (4+1)%5 = <strong>0</strong> — لفّ!',
+    'enqueue(50): rear = (0+1)%5 = <strong>1</strong> — استخدم الخانة الحرة',
+    '<span class="good">الخانات الحرة اتستخدمت تاني — مفيش هدر!</span>',
+  ];
+  clearTimeout(animTimer);
+  (function tick(){ if(step<steps.length){ cap.innerHTML=steps[step++]; animTimer=setTimeout(tick,2000); } })();
+}
+
+function setupS6() {
+  renderRow('s6-sq', [null,null,null,40,50].map((v,i) => makeCell(v,
+    ['wasted','wasted','wasted','filled','filled'][i],
+    [{idx:0},{idx:1},{idx:2},{idx:3,label:'front',type:'front'},{idx:4,label:'rear',type:'rear'}][i]
+  )));
+  renderRow('s6-cq', [30,40,null,10,20].map((v,i) => makeCell(v,
+    ['wrap-in','wrap-in','','filled','filled'][i],
+    [{idx:0,label:'rear',type:'rear'},{idx:1},{idx:2},{idx:3,label:'front',type:'front'},{idx:4}][i]
+  )));
+}
+
+function goTo(n) {
+  clearTimeout(animTimer);
+  document.querySelectorAll('.slide').forEach((s,i) => s.classList.toggle('active', i===n));
+  document.querySelectorAll('.dot').forEach((d,i) => { d.className='dot'+(i===n?' active':i<n?' done':''); });
+  document.getElementById('btn-prev').style.opacity = n===0?'.3':'1';
+  document.getElementById('btn-next').textContent = n===TOTAL-1?'من الأول ←':'التالي ←';
+  document.getElementById('progress-bar').style.width = (n/(TOTAL-1)*100).toFixed(1)+'%';
+  if(n===1) setupS1();
+  if(n===2) setupS2();
+  if(n===3) setupS3();
+  if(n===5) setupS5();
+  if(n===6) setupS6();
+  current = n;
+}
+
+function nextSlide() { goTo(current===TOTAL-1?0:current+1); }
+function prevSlide() { if(current>0) goTo(current-1); }
+
+const dotsEl = document.getElementById('dots');
+for(let i=0;i<TOTAL;i++){
+  const d=document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  d.onclick=()=>goTo(i);
+  dotsEl.appendChild(d);
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') nextSlide();
+  if(e.key==='ArrowLeft' ||e.key==='ArrowUp')   prevSlide();
+});
+
+// swipe support
+let tx=0;
+document.addEventListener('touchstart', e=>{ tx=e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend',   e=>{
+  const dx = e.changedTouches[0].clientX - tx;
+  if(Math.abs(dx)>40){ dx<0?nextSlide():prevSlide(); }
+}, {passive:true});
+
+goTo(0);
+</script>
+</body>
+</html>
