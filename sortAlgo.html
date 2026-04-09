@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خوارزميات الترتيب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface2: #18181f;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8e8f0;
+  --muted: #7070a0;
+  --accent: #6c63ff;
+  --accent2: #9d7dff;
+  --green: #22d3a5;
+  --amber: #f9a92d;
+  --red: #ff5e7a;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'IBM Plex Sans Arabic', sans-serif;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; opacity: 0.35;
+}
+.orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+.orb1 { width: 600px; height: 600px; background: rgba(108,99,255,0.1); top: -200px; right: -150px; }
+.orb2 { width: 500px; height: 500px; background: rgba(34,211,165,0.07); bottom: 0; left: -150px; }
+
+.wrapper { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 20px 60px; }
+
+/* HEADER */
+header { padding: 52px 0 36px; text-align: center; animation: fadeDown .6s ease both; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.3);
+  color: var(--accent2); font-size: 12px; font-weight: 500;
+  padding: 5px 16px; border-radius: 100px; margin-bottom: 20px; letter-spacing: .5px;
+}
+.badge::before { content: 'DS'; font-size: 9px; color: var(--accent); font-weight: 700; }
+h1 {
+  font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 700; line-height: 1.1;
+  letter-spacing: -1.5px; margin-bottom: 14px;
+  background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, var(--green) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.subtitle { color: var(--muted); font-size: 15px; font-weight: 300; line-height: 1.7; }
+
+/* TABS */
+.algo-tabs {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  margin: 28px 0; animation: fadeUp .6s .1s ease both;
+}
+.algo-tab {
+  padding: 9px 22px; border-radius: 100px; border: 1px solid var(--border2);
+  background: var(--surface); color: var(--muted); font-family: var(--sans);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all .2s;
+  white-space: nowrap; position: relative; overflow: hidden;
+}
+.algo-tab::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  opacity: 0; transition: opacity .2s;
+}
+.algo-tab:hover { color: var(--text); transform: translateY(-1px); }
+.algo-tab.active { color: #fff; border-color: transparent; }
+.algo-tab.active::before { opacity: 1; }
+.algo-tab span { position: relative; z-index: 1; }
+
+/* CARD */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; transition: border-color .2s;
+}
+.card:hover { border-color: var(--border2); }
+.card-header {
+  padding: 18px 28px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.card-title { font-size: 12px; font-weight: 600; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; }
+
+/* VISUALIZER HERO */
+#viz-card { animation: fadeUp .6s .15s ease both; margin-bottom: 20px; }
+.viz-hero { padding: 32px 40px 28px; }
+@media (max-width: 600px) { .viz-hero { padding: 20px 16px 20px; } }
+
+.step-msg {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; color: var(--text); min-height: 46px;
+  background: var(--surface2); border-radius: var(--radius-sm);
+  padding: 12px 18px; border: 1px solid var(--border);
+  margin-bottom: 28px; line-height: 1.5;
+}
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  flex-shrink: 0; animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
+
+/* BIG BARS */
+.bars-area {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 300px; padding: 0 8px;
+}
+@media (max-width: 600px) { .bars-area { height: 200px; gap: 4px; } }
+@media (max-width: 400px) { .bars-area { height: 160px; gap: 3px; } }
+
+.bar {
+  flex: 1; border-radius: 7px 7px 3px 3px;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 8px; font-size: 13px; font-weight: 600;
+  transition: height .25s cubic-bezier(.34,1.56,.64,1), background .18s;
+  min-width: 0; font-family: var(--mono); color: rgba(255,255,255,0.55);
+}
+@media (max-width: 480px) { .bar { font-size: 9px; padding-bottom: 4px; } }
+.bar.default   { background: linear-gradient(to top, #5b51e8, rgba(108,99,255,0.3)); }
+.bar.comparing { background: linear-gradient(to top, #d98a18, rgba(249,169,45,0.3)); color: rgba(249,169,45,.9); }
+.bar.pivot     { background: linear-gradient(to top, #d93650, rgba(255,94,122,0.3)); color: rgba(255,130,148,.9); }
+.bar.sorted    { background: linear-gradient(to top, #18a880, rgba(34,211,165,0.25)); color: rgba(34,211,165,.9); }
+
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 24px; }
+.stat-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 18px; text-align: center;
+}
+.stat-val { font-size: 28px; font-weight: 700; font-family: var(--mono); color: var(--text); line-height: 1; }
+.stat-lbl { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+/* CONTROLS */
+.controls {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  padding: 18px 28px; border-top: 1px solid var(--border); background: var(--surface2);
+}
+@media (max-width: 500px) { .controls { padding: 14px 16px; gap: 8px; } }
+.btn {
+  padding: 9px 20px; border-radius: var(--radius-sm); border: 1px solid var(--border2);
+  background: transparent; color: var(--text); font-family: var(--sans);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; gap: 7px;
+}
+.btn:hover { background: rgba(255,255,255,0.06); transform: translateY(-1px); }
+.btn:active { transform: none; }
+.btn:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: transparent; color: #fff; }
+.btn-primary:hover { opacity: .88; }
+.speed-row { margin-right: auto; display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--muted); }
+@media (max-width: 500px) { .speed-row { margin-right: 0; width: 100%; } }
+input[type=range] {
+  -webkit-appearance: none; width: 100px; height: 3px;
+  background: var(--border2); border-radius: 10px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 15px; height: 15px;
+  border-radius: 50%; background: var(--accent); cursor: pointer;
+  box-shadow: 0 0 10px rgba(108,99,255,.5);
+}
+
+/* LEGEND */
+.hdr-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: var(--muted); }
+.leg { display: flex; align-items: center; gap: 6px; }
+.leg-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* BOTTOM GRID */
+.bottom-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 20px; animation: fadeUp .6s .3s ease both;
+}
+@media (max-width: 700px) { .bottom-grid { grid-template-columns: 1fr; } }
+.card-body { padding: 24px 28px; }
+
+/* DESCRIPTION */
+.desc-text { font-size: 14px; line-height: 1.85; color: var(--muted); font-weight: 300; }
+
+/* COMPLEXITY */
+.complexity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cplx-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+.cplx-label { font-size: 10px; color: var(--muted); margin-bottom: 5px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+.cplx-val { font-size: 16px; font-weight: 600; font-family: var(--mono); }
+.cplx-val.good { color: var(--green); }
+.cplx-val.ok   { color: var(--amber); }
+.cplx-val.bad  { color: var(--red); }
+
+/* CODE BLOCK */
+#code-card { animation: fadeUp .6s .4s ease both; margin-top: 20px; }
+.code-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 20px; background: #0c0c13; border-bottom: 1px solid var(--border);
+}
+.code-dots { display: flex; gap: 7px; }
+.code-dots span { width: 12px; height: 12px; border-radius: 50%; }
+.dot-r { background: #ff5f57; } .dot-y { background: #ffbd2e; } .dot-g { background: #28ca41; }
+.code-filename { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.copy-btn {
+  padding: 5px 14px; background: rgba(255,255,255,.05); border: 1px solid var(--border2);
+  border-radius: 6px; color: var(--muted); font-size: 11px; cursor: pointer;
+  font-family: var(--sans); font-weight: 500; transition: all .15s;
+}
+.copy-btn:hover { color: var(--text); background: rgba(255,255,255,.1); }
+.code-body { background: #0c0c13; overflow-x: auto; }
+.code-lines { display: table; width: 100%; border-spacing: 0; padding: 16px 0; }
+.code-line { display: table-row; }
+.code-line:hover .ln, .code-line:hover .lc { background: rgba(255,255,255,.02); }
+.ln {
+  display: table-cell; width: 50px; text-align: right;
+  padding: 2px 16px 2px 0; font-family: var(--mono);
+  font-size: 13px; line-height: 1.9; color: #32324e;
+  user-select: none; border-right: 1px solid rgba(255,255,255,.04);
+  white-space: nowrap;
+}
+.lc {
+  display: table-cell; padding: 2px 28px;
+  font-family: var(--mono); font-size: 13.5px; line-height: 1.9;
+  white-space: pre; color: #c4cbdf;
+}
+@media (max-width: 600px) { .lc { font-size: 11.5px; padding: 2px 14px; } .ln { font-size: 11px; width: 36px; padding-right: 10px; } }
+/* syntax colors */
+.kw  { color: #c792ea; font-weight: 500; }
+.fn  { color: #82aaff; }
+.tp  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+.cm  { color: #4e5569; font-style: italic; }
+.empty .lc { height: 8px; }
+
+/* COMPARISON TABLE */
+#cmp-card { animation: fadeUp .6s .5s ease both; margin-top: 20px; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.cmp-table th {
+  padding: 11px 16px; text-align: right; font-weight: 600; font-size: 11px;
+  color: var(--muted); letter-spacing: .3px; text-transform: uppercase;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.cmp-table td {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 12px; transition: background .15s;
+}
+.cmp-table tr:last-child td { border-bottom: none; }
+.cmp-table tr:hover td { background: rgba(255,255,255,.02); }
+.cmp-table td:first-child { font-family: var(--sans); font-weight: 500; color: var(--text); font-size: 13px; }
+.cmp-table tr.active-row td { background: rgba(108,99,255,0.08) !important; }
+.cmp-table tr.active-row td:first-child { color: var(--accent2); font-weight: 600; }
+.chip { display: inline-block; padding: 2px 9px; border-radius: 100px; font-size: 10px; font-family: var(--sans); font-weight: 600; }
+.chip.g { background: rgba(34,211,165,.12); color: var(--green); }
+.chip.a { background: rgba(249,169,45,.12); color: var(--amber); }
+.chip.r { background: rgba(255,94,122,.12); color: var(--red); }
+.tc-good { color: var(--green); }
+.tc-ok   { color: var(--amber); }
+.tc-bad  { color: var(--red); }
+
+@keyframes fadeDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp   { from{opacity:0;transform:translateY(18px)}  to{opacity:1;transform:translateY(0)} }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 10px; }
+
+/* NAV */
+.site-nav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 40px;
+  background: rgba(10,10,15,0.85); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo-icon {
+  width: 36px; height: 36px;
+  background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.35);
+  border-radius: 9px; display: flex; align-items: center; justify-content: center;
+}
+.nav-logo-icon svg { width: 18px; height: 18px; }
+.nav-logo-text { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--text); }
+.nav-links { display: flex; gap: 6px; }
+.nav-a {
+  color: var(--muted); text-decoration: none;
+  font-family: var(--mono); font-size: 13px;
+  padding: 7px 16px; border-radius: 8px; transition: all 0.2s;
+}
+.nav-a:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.nav-a.active { background: rgba(108,99,255,0.15); color: #9d7dff; border: 1px solid rgba(108,99,255,0.3); }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<nav class="site-nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="8" width="18" height="8" rx="3"/>
+        <path d="M7 8V6M17 8V6M7 16v2M17 16v2"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">DSA</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-a">Home</a>
+    <a href="linkedlist.html" class="nav-a">Linked List</a>
+    <a href="stack.html" class="nav-a">Stacks</a>
+    <a href="interactive_queue_visualizer.html" class="nav-a">Queues</a>
+    <a href="sortAlgo.html" class="nav-a active">Sorting</a>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+  <header>
+    <div class="badge"><span>Data Structures 2</span></div>
+    <h1>خوارزميات الترتيب</h1>
+    <p class="subtitle">تعلّم كيف تعمل الـ Sorting Algorithms خطوة بخطوة — مرئيات تفاعلية + كود C++ منسّق</p>
+  </header>
+
+  <div class="algo-tabs">
+    <button class="algo-tab active" data-algo="selection"><span>Selection Sort</span></button>
+    <button class="algo-tab" data-algo="insertion"><span>Insertion Sort</span></button>
+    <button class="algo-tab" data-algo="bubble"><span>Bubble Sort</span></button>
+    <button class="algo-tab" data-algo="merge"><span>Merge Sort</span></button>
+    <button class="algo-tab" data-algo="quick"><span>Quick Sort</span></button>
+  </div>
+
+  <!-- VISUALIZER HERO — full width -->
+  <div class="card" id="viz-card">
+    <div class="card-header">
+      <span class="card-title" id="viz-title">Selection Sort — ترتيب الاختيار</span>
+      <div class="hdr-legend">
+        <div class="leg"><span class="leg-dot" style="background:#5b51e8"></span>عادي</div>
+        <div class="leg"><span class="leg-dot" style="background:#d98a18"></span>مقارنة</div>
+        <div class="leg"><span class="leg-dot" style="background:#d93650"></span>محور</div>
+        <div class="leg"><span class="leg-dot" style="background:#18a880"></span>مرتّب</div>
+      </div>
+    </div>
+
+    <div class="viz-hero">
+      <div class="step-msg">
+        <span class="step-dot" id="dot"></span>
+        <span id="step-label">اضغط "ابدأ" لمشاهدة الخوارزمية تعمل خطوة بخطوة</span>
+      </div>
+      <div class="bars-area" id="bars"></div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="s-comp">0</div><div class="stat-lbl">مقارنات</div></div>
+        <div class="stat-card"><div class="stat-val" id="s-swap">0</div><div class="stat-lbl">مبادلات</div></div>
+        <div class="stat-card"><div class="stat-val" id="s-step">0</div><div class="stat-lbl">خطوة</div></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-primary" id="btn-start" onclick="startSort()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>ابدأ
+      </button>
+      <button class="btn" style="border-color:var(--border)" onclick="resetArr()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>إعادة
+      </button>
+      <button class="btn" style="border-color:var(--border)" onclick="shuffleArr()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>خلط عشوائي
+      </button>
+      <div class="speed-row">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        السرعة <input type="range" min="1" max="5" value="3" id="speed-sl">
+        <span id="speed-lbl" style="min-width:55px;font-size:11px">متوسط</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESCRIPTION + COMPLEXITY -->
+  <div class="bottom-grid">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">الفكرة الأساسية</span>
+        <span id="algo-badge" style="font-size:11px;padding:3px 12px;border-radius:100px;font-weight:600;background:rgba(255,94,122,.15);color:#ff5e7a">O(n²)</span>
+      </div>
+      <div class="card-body"><p class="desc-text" id="algo-desc"></p></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">التعقيد الزمني والمكاني</span></div>
+      <div class="card-body"><div class="complexity-grid" id="cplx-grid"></div></div>
+    </div>
+  </div>
+
+  <!-- CODE BLOCK -->
+  <div class="card" id="code-card">
+    <div class="code-toolbar">
+      <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+      <span class="code-filename" id="code-filename">selection_sort.cpp</span>
+      <button class="copy-btn" onclick="copyCode()">نسخ الكود</button>
+    </div>
+    <div class="code-body">
+      <div class="code-lines" id="code-lines"></div>
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="card" id="cmp-card">
+    <div class="card-header"><span class="card-title">مقارنة جميع الخوارزميات</span></div>
+    <div style="overflow-x:auto">
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>الخوارزمية</th><th>Best Case</th><th>Average Case</th><th>Worst Case</th><th>Space</th><th>مستقر؟</th>
+          </tr>
+        </thead>
+        <tbody id="cmp-body">
+          <tr data-algo="selection"><td>Selection Sort</td><td class="tc-bad">O(n²)</td><td class="tc-bad">O(n²)</td><td class="tc-bad">O(n²)</td><td><span class="chip g">O(1)</span></td><td><span class="chip r">لا</span></td></tr>
+          <tr data-algo="insertion"><td>Insertion Sort</td><td class="tc-good">O(n)</td><td class="tc-bad">O(n²)</td><td class="tc-bad">O(n²)</td><td><span class="chip g">O(1)</span></td><td><span class="chip g">نعم</span></td></tr>
+          <tr data-algo="bubble"><td>Bubble Sort</td><td class="tc-good">O(n)</td><td class="tc-bad">O(n²)</td><td class="tc-bad">O(n²)</td><td><span class="chip g">O(1)</span></td><td><span class="chip g">نعم</span></td></tr>
+          <tr data-algo="merge"><td>Merge Sort</td><td class="tc-good">O(n log n)</td><td class="tc-good">O(n log n)</td><td class="tc-good">O(n log n)</td><td><span class="chip a">O(n)</span></td><td><span class="chip g">نعم</span></td></tr>
+          <tr data-algo="quick"><td>Quick Sort</td><td class="tc-good">O(n log n)</td><td class="tc-good">O(n log n)</td><td class="tc-bad">O(n²)</td><td><span class="chip g">O(log n)</span></td><td><span class="chip r">لا</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── ALGO DATA ──────────────────────────────────────────────────────────
+const ALGOS = {
+  selection: {
+    name:'Selection Sort', nameAr:'ترتيب الاختيار', badge:'O(n²)',
+    badgeStyle:'background:rgba(255,94,122,.15);color:#ff5e7a',
+    filename:'selection_sort.cpp',
+    desc:'ابحث عن أصغر عنصر في الجزء غير المرتب من المصفوفة، ثم ضعه في بدايته. كرر هذه العملية على ما تبقى حتى تنتهي المصفوفة. يتميز بعدد مبادلات صغير جداً (n−1 مبادلة فقط)، لكن المقارنات دائماً O(n²) بغض النظر عن البيانات.',
+    cplx:[{label:'Best Case',val:'O(n²)',cls:'bad'},{label:'Average',val:'O(n²)',cls:'bad'},{label:'Worst Case',val:'O(n²)',cls:'bad'},{label:'Space',val:'O(1)',cls:'good'}],
+    lines:[
+      'void <fn>selectionSort</fn>(<tp>int</tp> arr[], <tp>int</tp> n) {',
+      '    <kw>for</kw> (<tp>int</tp> i = <num>0</num>; i &lt; n - <num>1</num>; i++) {',
+      '        <cm>// افترض أن العنصر الحالي هو الأصغر</cm>',
+      '        <tp>int</tp> minIdx = i;',
+      '',
+      '        <kw>for</kw> (<tp>int</tp> j = i + <num>1</num>; j &lt; n; j++) {',
+      '            <cm>// ابحث عن أصغر عنصر في الجزء المتبقي</cm>',
+      '            <kw>if</kw> (arr[j] &lt; arr[minIdx])',
+      '                minIdx = j;',
+      '        }',
+      '',
+      '        <cm>// بدّل الأصغر مع أول عنصر في الجزء غير المرتب</cm>',
+      '        swap(arr[minIdx], arr[i]);',
+      '    }',
+      '}',
+    ],
+  },
+  insertion: {
+    name:'Insertion Sort', nameAr:'ترتيب الإدراج', badge:'O(n) → O(n²)',
+    badgeStyle:'background:rgba(249,169,45,.15);color:#f9a92d',
+    filename:'insertion_sort.cpp',
+    desc:'مثل ترتيب أوراق اللعب في يدك — خذ كل عنصر جديد وأدرجه في موضعه الصحيح بين العناصر المرتبة على يسارك. ممتاز للمصفوفات الصغيرة أو شبه المرتبة. يصل إلى O(n) عندما تكون المصفوفة مرتبة مسبقاً.',
+    cplx:[{label:'Best Case',val:'O(n)',cls:'good'},{label:'Average',val:'O(n²)',cls:'bad'},{label:'Worst Case',val:'O(n²)',cls:'bad'},{label:'Space',val:'O(1)',cls:'good'}],
+    lines:[
+      'void <fn>insertionSort</fn>(<tp>int</tp> arr[], <tp>int</tp> n) {',
+      '    <kw>for</kw> (<tp>int</tp> i = <num>1</num>; i &lt; n; i++) {',
+      '        <cm>// احفظ العنصر المراد إدراجه</cm>',
+      '        <tp>int</tp> key = arr[i];',
+      '        <tp>int</tp> j   = i - <num>1</num>;',
+      '',
+      '        <cm>// حرّك العناصر الأكبر من key خطوة للأمام</cm>',
+      '        <kw>while</kw> (j &gt;= <num>0</num> &amp;&amp; arr[j] &gt; key) {',
+      '            arr[j + <num>1</num>] = arr[j];',
+      '            j--;',
+      '        }',
+      '',
+      '        <cm>// ضع العنصر في مكانه الصحيح</cm>',
+      '        arr[j + <num>1</num>] = key;',
+      '    }',
+      '}',
+    ],
+  },
+  bubble: {
+    name:'Bubble Sort', nameAr:'ترتيب الفقاعة', badge:'O(n²)',
+    badgeStyle:'background:rgba(255,94,122,.15);color:#ff5e7a',
+    filename:'bubble_sort.cpp',
+    desc:'قارن كل عنصرين متجاورين، وبادل بينهما إذا كانا في الترتيب الخاطئ. الأكبر "يطفو" نحو النهاية مثل الفقاعة. إضافة متغير swapped تُحسّن الأداء ليصبح O(n) عندما تكون المصفوفة مرتبة مسبقاً.',
+    cplx:[{label:'Best Case',val:'O(n)',cls:'good'},{label:'Average',val:'O(n²)',cls:'bad'},{label:'Worst Case',val:'O(n²)',cls:'bad'},{label:'Space',val:'O(1)',cls:'good'}],
+    lines:[
+      'void <fn>bubbleSort</fn>(<tp>int</tp> arr[], <tp>int</tp> n) {',
+      '    <kw>for</kw> (<tp>int</tp> i = <num>0</num>; i &lt; n - <num>1</num>; i++) {',
+      '        <cm>// تتبّع ما إذا حدثت مبادلة في هذه الجولة</cm>',
+      '        <tp>bool</tp> swapped = <kw>false</kw>;',
+      '',
+      '        <kw>for</kw> (<tp>int</tp> j = <num>0</num>; j &lt; n - i - <num>1</num>; j++) {',
+      '            <kw>if</kw> (arr[j] &gt; arr[j + <num>1</num>]) {',
+      '                swap(arr[j], arr[j + <num>1</num>]);',
+      '                swapped = <kw>true</kw>;',
+      '            }',
+      '        }',
+      '',
+      '        <cm>// إذا لم تحدث مبادلة → المصفوفة مرتبة مسبقاً</cm>',
+      '        <kw>if</kw> (!swapped) <kw>break</kw>;',
+      '    }',
+      '}',
+    ],
+  },
+  merge: {
+    name:'Merge Sort', nameAr:'ترتيب الدمج', badge:'O(n log n)',
+    badgeStyle:'background:rgba(34,211,165,.15);color:#22d3a5',
+    filename:'merge_sort.cpp',
+    desc:'Divide & Conquer — قسّم المصفوفة إلى نصفين، رتّب كل نصف بشكل متكرر (Recursion)، ثم ادمج النصفين المرتبين في مصفوفة واحدة. يضمن O(n log n) في جميع الحالات، لكن يحتاج O(n) ذاكرة إضافية.',
+    cplx:[{label:'Best Case',val:'O(n log n)',cls:'good'},{label:'Average',val:'O(n log n)',cls:'good'},{label:'Worst Case',val:'O(n log n)',cls:'good'},{label:'Space',val:'O(n)',cls:'ok'}],
+    lines:[
+      '<cm>// دالة الدمج: تدمج arr[l..m] مع arr[m+1..r]</cm>',
+      'void <fn>merge</fn>(<tp>int</tp> a[], <tp>int</tp> l, <tp>int</tp> m, <tp>int</tp> r) {',
+      '    <tp>int</tp> n1 = m - l + <num>1</num>,  n2 = r - m;',
+      '    <tp>int</tp> L[n1], R[n2];',
+      '',
+      '    <cm>// انسخ البيانات إلى المصفوفتين المؤقتتين</cm>',
+      '    <kw>for</kw> (<tp>int</tp> i = <num>0</num>; i &lt; n1; i++) L[i] = a[l + i];',
+      '    <kw>for</kw> (<tp>int</tp> j = <num>0</num>; j &lt; n2; j++) R[j] = a[m + <num>1</num> + j];',
+      '',
+      '    <cm>// ادمج النصفين بالترتيب الصحيح</cm>',
+      '    <tp>int</tp> i = <num>0</num>, j = <num>0</num>, k = l;',
+      '    <kw>while</kw> (i &lt; n1 &amp;&amp; j &lt; n2)',
+      '        a[k++] = (L[i] &lt;= R[j]) ? L[i++] : R[j++];',
+      '    <kw>while</kw> (i &lt; n1) a[k++] = L[i++];',
+      '    <kw>while</kw> (j &lt; n2) a[k++] = R[j++];',
+      '}',
+      '',
+      'void <fn>mergeSort</fn>(<tp>int</tp> a[], <tp>int</tp> l, <tp>int</tp> r) {',
+      '    <kw>if</kw> (l &lt; r) {',
+      '        <tp>int</tp> m = l + (r - l) / <num>2</num>;',
+      '        <fn>mergeSort</fn>(a, l, m);          <cm>// رتّب النصف الأيسر</cm>',
+      '        <fn>mergeSort</fn>(a, m + <num>1</num>, r);     <cm>// رتّب النصف الأيمن</cm>',
+      '        <fn>merge</fn>(a, l, m, r);           <cm>// ادمج النصفين</cm>',
+      '    }',
+      '}',
+    ],
+  },
+  quick: {
+    name:'Quick Sort', nameAr:'الترتيب السريع', badge:'O(n log n)',
+    badgeStyle:'background:rgba(34,211,165,.15);color:#22d3a5',
+    filename:'quick_sort.cpp',
+    desc:'اختر عنصراً "محوراً" (pivot)، ضع كل ما هو أصغر منه على يساره وكل ما هو أكبر على يمينه، ثم كرر العملية على القسمين. الأسرع عملياً في معظم الحالات، لكن worst case هو O(n²) عند اختيار pivot سيئ.',
+    cplx:[{label:'Best Case',val:'O(n log n)',cls:'good'},{label:'Average',val:'O(n log n)',cls:'good'},{label:'Worst Case',val:'O(n²)',cls:'bad'},{label:'Space',val:'O(log n)',cls:'good'}],
+    lines:[
+      '<cm>// تقسيم المصفوفة حول الـ pivot وإرجاع موضعه النهائي</cm>',
+      '<tp>int</tp> <fn>partition</fn>(<tp>int</tp> a[], <tp>int</tp> lo, <tp>int</tp> hi) {',
+      '    <tp>int</tp> pivot = a[hi];    <cm>// اختر آخر عنصر كـ pivot</cm>',
+      '    <tp>int</tp> i     = lo - <num>1</num>;  <cm>// مؤشر آخر عنصر أصغر من pivot</cm>',
+      '',
+      '    <kw>for</kw> (<tp>int</tp> j = lo; j &lt; hi; j++) {',
+      '        <kw>if</kw> (a[j] &lt;= pivot) {',
+      '            i++;',
+      '            swap(a[i], a[j]);  <cm>// حرّك الأصغر لليسار</cm>',
+      '        }',
+      '    }',
+      '',
+      '    <cm>// ضع الـ pivot في موضعه الصحيح</cm>',
+      '    swap(a[i + <num>1</num>], a[hi]);',
+      '    <kw>return</kw> i + <num>1</num>;',
+      '}',
+      '',
+      'void <fn>quickSort</fn>(<tp>int</tp> a[], <tp>int</tp> lo, <tp>int</tp> hi) {',
+      '    <kw>if</kw> (lo &lt; hi) {',
+      '        <tp>int</tp> pi = <fn>partition</fn>(a, lo, hi);',
+      '        <fn>quickSort</fn>(a, lo, pi - <num>1</num>);  <cm>// رتّب اليسار</cm>',
+      '        <fn>quickSort</fn>(a, pi + <num>1</num>, hi);  <cm>// رتّب اليمين</cm>',
+      '    }',
+      '}',
+    ],
+  },
+};
+
+// ── STATE ──────────────────────────────────────────────
+let algo='selection', arr=[], steps=[], stepIdx=0, running=false, timer=null;
+const speedLabels=['بطيء جداً','بطيء','متوسط','سريع','سريع جداً'];
+const delays=[750,420,190,75,18];
+
+document.getElementById('speed-sl').oninput=function(){
+  document.getElementById('speed-lbl').textContent=speedLabels[this.value-1];
+};
+
+// ── RENDER CODE ─────────────────────────────────────────
+function renderCode(a){
+  const d=ALGOS[a];
+  document.getElementById('code-filename').textContent=d.filename;
+  let html='';
+  d.lines.forEach((line,idx)=>{
+    const n=idx+1;
+    const c=line
+      .replace(/&lt;/g,'<ESCAPED_LT>').replace(/&gt;/g,'<ESCAPED_GT>').replace(/&amp;/g,'<ESCAPED_AMP>')
+      .replace(/<fn>(.*?)<\/fn>/g,'<span class="fn">$1</span>')
+      .replace(/<kw>(.*?)<\/kw>/g,'<span class="kw">$1</span>')
+      .replace(/<tp>(.*?)<\/tp>/g,'<span class="tp">$1</span>')
+      .replace(/<num>(.*?)<\/num>/g,'<span class="num">$1</span>')
+      .replace(/<cm>(.*?)<\/cm>/g,'<span class="cm">$1</span>')
+      .replace(/<ESCAPED_LT>/g,'&lt;').replace(/<ESCAPED_GT>/g,'&gt;').replace(/<ESCAPED_AMP>/g,'&amp;');
+    if(line===''){
+      html+=`<div class="code-line empty"><span class="ln">${n}</span><span class="lc"> </span></div>`;
+    } else {
+      html+=`<div class="code-line"><span class="ln">${n}</span><span class="lc">${c}</span></div>`;
+    }
+  });
+  document.getElementById('code-lines').innerHTML=html;
+}
+
+// ── UPDATE INFO ─────────────────────────────────────────
+function updateInfo(a){
+  const d=ALGOS[a];
+  document.getElementById('viz-title').textContent=`${d.name} — ${d.nameAr}`;
+  const b=document.getElementById('algo-badge');
+  b.textContent=d.badge;
+  b.setAttribute('style',d.badgeStyle+';font-size:11px;padding:3px 12px;border-radius:100px;font-weight:600');
+  document.getElementById('algo-desc').textContent=d.desc;
+  document.getElementById('cplx-grid').innerHTML=d.cplx.map(c=>`
+    <div class="cplx-item">
+      <div class="cplx-label">${c.label}</div>
+      <div class="cplx-val ${c.cls}">${c.val}</div>
+    </div>`).join('');
+  document.querySelectorAll('#cmp-body tr').forEach(r=>{
+    r.classList.toggle('active-row',r.dataset.algo===a);
+  });
+  renderCode(a);
+}
+
+// ── ARR ─────────────────────────────────────────────────
+function initArr(){ arr=[64,25,12,22,11,38,50,8,45,33]; }
+
+function renderArr(hl=[]){
+  const el=document.getElementById('bars');
+  const max=Math.max(...arr);
+  el.innerHTML=arr.map((v,i)=>{
+    const h=hl.find(x=>x.idx===i);
+    const cls=h?h.state:'default';
+    const pct=Math.round((v/max)*100);
+    return `<div class="bar ${cls}" style="height:${pct}%">${v}</div>`;
+  }).join('');
+}
+
+function updateStats(c,s,st){
+  document.getElementById('s-comp').textContent=c;
+  document.getElementById('s-swap').textContent=s;
+  document.getElementById('s-step').textContent=st;
+}
+
+// ── TABS ────────────────────────────────────────────────
+document.querySelectorAll('.algo-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    stopSort(); algo=btn.dataset.algo;
+    document.querySelectorAll('.algo-tab').forEach(b=>b.classList.toggle('active',b===btn));
+    updateInfo(algo); initArr(); steps=[]; stepIdx=0;
+    renderArr(); updateStats(0,0,0);
+    setLbl('اضغط "ابدأ" لمشاهدة الخوارزمية تعمل خطوة بخطوة');
+    resetBtn();
+  });
+});
+
+function setLbl(t){document.getElementById('step-label').textContent=t;}
+function resetBtn(){
+  const b=document.getElementById('btn-start');
+  b.disabled=false;
+  b.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>ابدأ';
+}
+
+function shuffleArr(){
+  stopSort(); arr=Array.from({length:10},()=>Math.floor(Math.random()*88)+6);
+  steps=[];stepIdx=0; renderArr(); updateStats(0,0,0);
+  setLbl('اضغط "ابدأ" لمشاهدة الخوارزمية تعمل خطوة بخطوة'); resetBtn();
+}
+function resetArr(){
+  stopSort(); initArr(); steps=[];stepIdx=0; renderArr(); updateStats(0,0,0);
+  setLbl('اضغط "ابدأ" لمشاهدة الخوارزمية تعمل خطوة بخطوة'); resetBtn();
+}
+function stopSort(){
+  if(timer){clearInterval(timer);timer=null;} running=false;
+  document.getElementById('dot').style.animationPlayState='paused';
+  const b=document.getElementById('btn-start');
+  if(!b.disabled) b.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>ابدأ';
+}
+
+// ── STEP GENERATORS ─────────────────────────────────────
+function buildSteps(){
+  const a=[...arr]; const st=[];
+  if(algo==='selection') genSel(a,st);
+  else if(algo==='insertion') genIns(a,st);
+  else if(algo==='bubble') genBub(a,st);
+  else if(algo==='merge') genMrg(a,st);
+  else if(algo==='quick') genQck(a,st);
+  const last=st[st.length-1]||{comps:0,swaps:0};
+  st.push({arr:[...a],hl:a.map((_,i)=>({idx:i,state:'sorted'})),label:'✓ المصفوفة مرتبة بالكامل!',comps:last.comps,swaps:last.swaps});
+  return st;
+}
+function add(st,a,hl,label,c,s){st.push({arr:[...a],hl,label,comps:c,swaps:s});}
+
+function genSel(a,st){
+  let c=0,s=0;
+  for(let i=0;i<a.length-1;i++){
+    let mn=i;
+    for(let j=i+1;j<a.length;j++){
+      c++;
+      add(st,a,[...Array(i).fill(0).map((_,k)=>({idx:k,state:'sorted'})),{idx:mn,state:'pivot'},{idx:j,state:'comparing'}],`مقارنة a[${j}]=${a[j]} مع أصغر = ${a[mn]}`,c,s);
+      if(a[j]<a[mn])mn=j;
+    }
+    if(mn!==i){[a[i],a[mn]]=[a[mn],a[i]];s++;}
+    add(st,a,[...Array(i+1).fill(0).map((_,k)=>({idx:k,state:'sorted'}))],`وضع ${a[i]} في موضعه [${i}]`,c,s);
+  }
+}
+function genIns(a,st){
+  let c=0,s=0;
+  for(let i=1;i<a.length;i++){
+    let key=a[i],j=i-1;
+    add(st,a,[...Array(i).fill(0).map((_,k)=>({idx:k,state:'sorted'})),{idx:i,state:'pivot'}],`اختيار ${key} للإدراج`,c,s);
+    while(j>=0&&a[j]>key){
+      c++;
+      add(st,a,[{idx:j,state:'comparing'},{idx:j+1,state:'pivot'},...Array(j).fill(0).map((_,k)=>({idx:k,state:'sorted'}))],`${a[j]} > ${key} → نحرّك يميناً`,c,s);
+      a[j+1]=a[j];a[j]=key;s++;j--;
+    }
+    add(st,a,[...Array(j+2).fill(0).map((_,k)=>({idx:k,state:'sorted'}))],`إدراج ${key} في [${j+1}]`,c,s);
+  }
+}
+function genBub(a,st){
+  let c=0,s=0;
+  for(let i=0;i<a.length-1;i++){
+    let sw=false;
+    for(let j=0;j<a.length-i-1;j++){
+      c++;
+      const sorted=Array(i).fill(0).map((_,k)=>({idx:a.length-1-k,state:'sorted'}));
+      add(st,a,[{idx:j,state:'comparing'},{idx:j+1,state:'comparing'},...sorted],`مقارنة ${a[j]} و ${a[j+1]}`,c,s);
+      if(a[j]>a[j+1]){[a[j],a[j+1]]=[a[j+1],a[j]];s++;sw=true;
+        add(st,a,[{idx:j,state:'pivot'},{idx:j+1,state:'pivot'},...sorted],`مبادلة! ${a[j+1]} ↔ ${a[j]}`,c,s);
+      }
+    }
+    if(!sw)break;
+  }
+}
+function genMrg(a,st){
+  let c=0,s=0;
+  function ms(arr,l,r){
+    if(l>=r)return;
+    const m=Math.floor((l+r)/2);
+    ms(arr,l,m);ms(arr,m+1,r);
+    const L=arr.slice(l,m+1),R=arr.slice(m+1,r+1);
+    let i=0,j=0,k=l;
+    while(i<L.length&&j<R.length){
+      c++;
+      add(st,arr,[{idx:l+i,state:'comparing'},{idx:m+1+j,state:'pivot'}],`دمج: ${L[i]} مقابل ${R[j]}`,c,s);
+      if(L[i]<=R[j])arr[k++]=L[i++];
+      else{arr[k++]=R[j++];s++;}
+    }
+    while(i<L.length)arr[k++]=L[i++];
+    while(j<R.length)arr[k++]=R[j++];
+    add(st,arr,Array(r-l+1).fill(0).map((_,x)=>({idx:l+x,state:'sorted'})),`تم دمج [${l}..${r}]`,c,s);
+  }
+  ms(a,0,a.length-1);
+}
+function genQck(a,st){
+  let c=0,s=0;
+  function qk(arr,lo,hi){
+    if(lo>=hi)return;
+    const pv=arr[hi];let i=lo-1;
+    add(st,arr,[{idx:hi,state:'pivot'}],`pivot = ${pv} (index ${hi})`,c,s);
+    for(let j=lo;j<hi;j++){
+      c++;
+      add(st,arr,[{idx:hi,state:'pivot'},{idx:j,state:'comparing'}],`${arr[j]} مقابل pivot=${pv}`,c,s);
+      if(arr[j]<=pv){i++;[arr[i],arr[j]]=[arr[j],arr[i]];s++;
+        add(st,arr,[{idx:i,state:'sorted'},{idx:hi,state:'pivot'}],`مبادلة a[${i}] ↔ a[${j}]`,c,s);
+      }
+    }
+    [arr[i+1],arr[hi]]=[arr[hi],arr[i+1]];s++;
+    add(st,arr,[{idx:i+1,state:'sorted'}],`pivot ${pv} في موضعه [${i+1}]`,c,s);
+    qk(arr,lo,i);qk(arr,i+2,hi);
+  }
+  qk(a,0,a.length-1);
+}
+
+// ── START / STOP ─────────────────────────────────────────
+function startSort(){
+  if(running){stopSort();return;}
+  if(!steps.length||stepIdx>=steps.length){initArr();steps=buildSteps();stepIdx=0;}
+  running=true;
+  document.getElementById('btn-start').innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> إيقاف';
+  document.getElementById('dot').style.animationPlayState='running';
+  const delay=delays[parseInt(document.getElementById('speed-sl').value)-1];
+  timer=setInterval(()=>{
+    if(stepIdx>=steps.length){
+      stopSort();
+      document.getElementById('btn-start').disabled=true;
+      document.getElementById('btn-start').innerHTML='✓ تم الترتيب';
+      return;
+    }
+    const step=steps[stepIdx];
+    arr=[...step.arr]; renderArr(step.hl);
+    setLbl(step.label); updateStats(step.comps,step.swaps,stepIdx+1);
+    stepIdx++;
+  },delay);
+}
+
+// ── COPY CODE ────────────────────────────────────────────
+function copyCode(){
+  const rows=document.querySelectorAll('#code-lines .lc');
+  const text=Array.from(rows).map(r=>r.innerText).join('\n');
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.querySelector('.copy-btn');
+    btn.textContent='✓ تم النسخ';btn.style.color='var(--green)';
+    setTimeout(()=>{btn.textContent='نسخ الكود';btn.style.color='';},2000);
+  });
+}
+
+// ── BOOT ─────────────────────────────────────────────────
+initArr(); renderArr(); updateInfo(algo);
+</script>
+</body>
+</html>
